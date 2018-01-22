@@ -14,21 +14,22 @@
 #include <ospray/ospcommon/box.h>
 #include <IceT.h>
 #include <IceTMPI.h>
+#include "util.h"
 
 using namespace ospcommon;
 
+int world_size, rank;
+const vec2i img_size(1024, 1024);
+
+void ospray_draw_callback(const double *proj_mat, const double *modelview_mat,
+		const float *bg_color, const int *readback_viewport, IceTImage result);
 void write_ppm(const std::string &file_name, const int width, const int height,
 		const uint32_t *img);
-// Compute an X x Y x Z grid to have num bricks,
-// only gives a nice grid for numbers with even factors since
-// we don't search for factors of the number, we just try dividing by two
-vec3i compute_grid(int num);
 
 int main(int argc, char **argv) {
 	int provided = 0;
 	MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
 
-	int world_size, rank;
 	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -37,8 +38,8 @@ int main(int argc, char **argv) {
 	}
 
 	// If we're using IceT to composite we use OSPRay in its local rendering mode
-	//OSPDevice device = ospNewDevice("default");
-	OSPDevice device = ospNewDevice("mpi_distributed");
+	OSPDevice device = ospNewDevice("default");
+	//OSPDevice device = ospNewDevice("mpi_distributed");
 	ospDeviceSet1i(device, "masterRank", 0);
 	ospDeviceSetStatusFunc(device, [](const char *msg) { std::cout << msg << "\n"; });
 	ospDeviceCommit(device);
@@ -72,7 +73,7 @@ int main(int argc, char **argv) {
 	// volume data within the [0, 1] box
 	OSPVolume volume = ospNewVolume("block_bricked_volume");
 	const vec3i volume_dims(64);
-	const vec3i grid = compute_grid(world_size);
+	const vec3i grid = compute_grid3d(world_size);
 	const vec3i brick_id(rank % grid.x,
 			(rank / grid.x) % grid.y, rank / (grid.x * grid.y));
 
@@ -115,7 +116,6 @@ int main(int argc, char **argv) {
 	const vec3f cam_dir = cam_at - cam_pos;
 
 	// Setup the camera we'll render the scene from
-	const osp::vec2i img_size{1024, 1024};
 	OSPCamera camera = ospNewCamera("perspective");
 	ospSet1f(camera, "aspect", 1.0);
 	ospSet3fv(camera, "pos", &cam_pos.x);
@@ -133,20 +133,55 @@ int main(int argc, char **argv) {
 	ospCommit(renderer);
 
 	// Create a framebuffer to render the image too
-	OSPFrameBuffer framebuffer = ospNewFrameBuffer(img_size, OSP_FB_SRGBA,
+	OSPFrameBuffer framebuffer = ospNewFrameBuffer((osp::vec2i&)img_size, OSP_FB_SRGBA,
 			OSP_FB_COLOR | OSP_FB_ACCUM);
 	ospFrameBufferClear(framebuffer, OSP_FB_COLOR);
 
 	// Render the image and save it out
-	for (size_t i = 0; i < 16; ++i) {
-		ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
+	//ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
+
+	auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
+	auto icet_context = icetCreateContext(icet_comm);
+	// Setup IceT for alpha-blending compositing
+	icetEnable(ICET_ORDERED_COMPOSITE);
+	icetEnable(ICET_CORRECT_COLORED_BACKGROUND);
+	icetCompositeMode(ICET_COMPOSITE_MODE_BLEND);
+	icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_UBYTE);
+	icetSetDepthFormat(ICET_IMAGE_DEPTH_NONE);
+
+	// Compute the sort order for the ranks and give it to IceT
+	std::vector<int> process_order;
+	for (int i = 0; i < world_size; ++i) {
+		process_order.push_back(i);
 	}
+	icetCompositeOrder(process_order.data());
+
+	icetResetTiles();
+	icetAddTile(0, 0, img_size.x, img_size.y, 0);
+	icetStrategy(ICET_STRATEGY_REDUCE);
+
+	// TODO: Tell IceT the bounding box of our volume in world space.
+	// This also requires us to give it a real projection and view matrix
+	// that it can use to project the box to the screen.
+	// icetBoundingBoxf(bounds.lower.x, bounds.upper.x, bounds.lower.y, bounds.upper.y,
+	// 					bounds.lower.z, bounds.upper.z);
+
+	icetDrawCallback(ospray_draw_callback);
+	std::array<double, 16> fake_mat = {
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	};
+	std::array<float, 4> icet_bgcolor = {0.1f, 0.1f, 0.1f, 0.1f};
+	auto icet_img = icetDrawFrame(fake_mat.data(), fake_mat.data(), icet_bgcolor.data());
 
 	if (rank == 0) {
-		const uint32_t *img = static_cast<const uint32_t*>(ospMapFrameBuffer(framebuffer, OSP_FB_COLOR));
+		//const uint32_t *img = static_cast<const uint32_t*>(ospMapFrameBuffer(framebuffer, OSP_FB_COLOR));
+		const uint32_t *img = reinterpret_cast<const uint32_t*>(icetImageGetColorcub(icet_img));
 		write_ppm("regions_sample.ppm", img_size.x, img_size.y, img);
 		std::cout << "Image saved to 'regions_sample.ppm'\n";
-		ospUnmapFrameBuffer(img, framebuffer);
+		//ospUnmapFrameBuffer(img, framebuffer);
 	}
 
 	// Clean up all our objects
@@ -160,50 +195,27 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
-void write_ppm(const std::string &file_name, const int width, const int height,
-		const uint32_t *img)
+void ospray_draw_callback(const double *proj_mat, const double *modelview_mat,
+		const float *bg_color, const int *readback_viewport, IceTImage result)
 {
-	FILE *file = fopen(file_name.c_str(), "wb");
-	if (!file) {
-		throw std::runtime_error("Failed to open file for PPM output");
-	}
+	const vec2i img_grid = compute_grid2d(world_size);
+	const vec2i tile_id(rank % img_grid.x, rank / img_grid.x);
+	const vec2i tile_size = img_size / img_grid;
+	const vec2i tile_origin = tile_id * tile_size;
+	const vec3f rank_color = hsv_to_rgb((360.f * rank) / world_size, 0.8, (rank + 1.f) / world_size);
 
-	fprintf(file, "P6\n%i %i\n255\n", width, height);
-	std::vector<uint8_t> out(3 * width, 0);
-	for (int y = 0; y < height; ++y) {
-		const uint8_t *in = reinterpret_cast<const uint8_t*>(&img[(height - 1 - y) * width]);
-		for (int x = 0; x < width; ++x) {
-			out[3 * x] = in[4 * x];
-			out[3 * x + 1] = in[4 * x + 1];
-			out[3 * x + 2] = in[4 * x + 2];
-		}
-		fwrite(out.data(), out.size(), sizeof(uint8_t), file);
-	}
-	fprintf(file, "\n");
-	fclose(file);
-}
-bool compute_divisor(int x, int &divisor) {
-	int upper_bound = std::sqrt(x);
-	for (int i = 2; i <= upper_bound; ++i) {
-		if (x % i == 0) {
-			divisor = i;
-			return true;
+	uint8_t *img = icetImageGetColorub(result);
+	for (int j = 0; j < tile_size.y; ++j) {
+		const int y = j + tile_origin.y;
+		for (int i = 0; i < tile_size.x; ++i) {
+			const int x = i + tile_origin.x;
+			uint8_t *pixel = &img[(y * img_size.x + x) * 4];
+			for (int c = 0; c < 3; ++c) {
+				pixel[c] = clamp(static_cast<uint8_t>(rank_color[c] * 255.f),
+						uint8_t(0), uint8_t(255));
+			}
+			pixel[3] = 255;
 		}
 	}
-	return false;
-}
-vec3i compute_grid(int num){
-	vec3i grid(1);
-	int axis = 0;
-	int divisor = 0;
-	while (compute_divisor(num, divisor)) {
-		grid[axis] *= divisor;
-		num /= divisor;
-		axis = (axis + 1) % 3;
-	}
-	if (num != 1) {
-		grid[axis] *= num;
-	}
-	return grid;
 }
 
