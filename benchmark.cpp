@@ -17,15 +17,6 @@
 
 using namespace ospcommon;
 
-struct Particle {
-	vec3f pos;
-	int color_id;
-
-	Particle(float x, float y, float z)
-		: pos(vec3f{x, y, z}), color_id(0)
-		{}
-};
-
 void write_ppm(const std::string &file_name, const int width, const int height,
 		const uint32_t *img);
 // Compute an X x Y x Z grid to have num bricks,
@@ -45,6 +36,8 @@ int main(int argc, char **argv) {
 		throw std::runtime_error("Failed to load OSPRay MPI module");
 	}
 
+	// If we're using IceT to composite we use OSPRay in its local rendering mode
+	//OSPDevice device = ospNewDevice("default");
 	OSPDevice device = ospNewDevice("mpi_distributed");
 	ospDeviceSet1i(device, "masterRank", 0);
 	ospDeviceSetStatusFunc(device, [](const char *msg) { std::cout << msg << "\n"; });
@@ -106,47 +99,6 @@ int main(int argc, char **argv) {
 	const box3f bounds(grid_origin, grid_origin + vec3f(volume_dims));
 	OSPData region_data = ospNewData(2, OSP_FLOAT3, &bounds);
 	ospSetData(model, "regions", region_data);
-
-	// Generate some particles within our region
-	std::random_device rd;
-	std::mt19937 rng(rd());
-	std::vector<Particle> atoms;
-	const float radius = 1.0;
-	{
-		std::uniform_real_distribution<float> pos_x(bounds.lower.x + radius, bounds.upper.x - radius);
-		std::uniform_real_distribution<float> pos_y(bounds.lower.y + radius, bounds.upper.y - radius);
-		std::uniform_real_distribution<float> pos_z(bounds.lower.z + radius, bounds.upper.z - radius);
-
-		// Randomly generate some spheres
-		for (size_t i = 0; i < 50; ++i) {
-			atoms.push_back(Particle(pos_x(rng), pos_y(rng), pos_z(rng)));
-		}
-	}
-	const std::array<float, 3> atom_color = {
-		static_cast<float>(rank) / world_size,
-		static_cast<float>(rank) / world_size,
-		static_cast<float>(rank) / world_size
-	};
-
-	// Make the OSPData which will refer to our particle and color data.
-	// The OSP_DATA_SHARED_BUFFER flag tells OSPRay not to share our buffer,
-	// instead of taking a copy.
-	OSPData sphere_data = ospNewData(atoms.size() * sizeof(Particle), OSP_CHAR,
-			atoms.data(), OSP_DATA_SHARED_BUFFER);
-	ospCommit(sphere_data);
-	OSPData color_data = ospNewData(1, OSP_FLOAT3,
-			atom_color.data(), OSP_DATA_SHARED_BUFFER);
-	ospCommit(color_data);
-
-	// Create the sphere geometry that we'll use to represent our particles
-	OSPGeometry spheres = ospNewGeometry("spheres");
-	ospSetData(spheres, "spheres", sphere_data);
-	ospSetData(spheres, "color", color_data);
-	ospSet1f(spheres, "radius", radius);
-	ospSet1i(spheres, "bytes_per_sphere", sizeof(Particle));
-	ospSet1i(spheres, "offset_colorID", sizeof(osp::vec3f));
-	ospCommit(spheres);
-	ospAddGeometry(model, spheres);
 
 	ospCommit(model);
 
