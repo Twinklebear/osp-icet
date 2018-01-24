@@ -28,6 +28,21 @@ void ospray_draw_callback(const double *proj_mat, const double *modelview_mat,
 		const float *bg_color, const int *readback_viewport, IceTImage result);
 void write_ppm(const std::string &file_name, const int width, const int height,
 		const uint32_t *img);
+void compute_icet_matrices(const vec3f &cam_pos, const vec3f &cam_up, const vec3f &cam_dir,
+		const float cam_fovy, std::array<double, 16> &proj, std::array<double, 16> &view);
+
+// print a column major matrix
+void print_mat4(const double *m) {
+	std::cout << "mat4 = {\n";
+	for (int i = 0; i < 4; ++i) {
+		std::cout << "\t["
+			<< m[i] << ", "
+			<< m[4 + i] << ", "
+			<< m[8 + i] << ", "
+			<< m[12 + i] << "]\n";
+	}
+	std::cout << "\n}\n";
+}
 
 int main(int argc, char **argv) {
 	int provided = 0;
@@ -77,6 +92,7 @@ int main(int argc, char **argv) {
 	// Setup our piece of the volume data, each rank has some brick of
 	// volume data within the [0, 1] box
 	OSPVolume volume = ospNewVolume("block_bricked_volume");
+	// TODO: Ghost zones.
 	const vec3i brick_dims(64);
 	const vec3i grid = compute_grid3d(world_size);
 	const vec3i brick_id(rank % grid.x,
@@ -102,8 +118,8 @@ int main(int argc, char **argv) {
 	// For correct compositing we must specify a list of regions that bound the
 	// data owned by this rank. These region bounds will be used for sort-last
 	// compositing when rendering.
-	/*
 	const box3f bounds(grid_origin, grid_origin + vec3f(brick_dims));
+	/*
 	OSPData region_data = ospNewData(2, OSP_FLOAT3, &bounds);
 	ospSetData(model, "regions", region_data);
 	*/
@@ -121,6 +137,7 @@ int main(int argc, char **argv) {
 	const vec3f cam_up(0, 1, 0);
 	const vec3f cam_at = world_diagonal * vec3f(0.5);
 	const vec3f cam_dir = cam_at - cam_pos;
+	const float cam_fovy = 60.f;
 
 	// Setup the camera we'll render the scene from
 	OSPCamera camera = ospNewCamera("perspective");
@@ -128,6 +145,7 @@ int main(int argc, char **argv) {
 	ospSet3fv(camera, "pos", &cam_pos.x);
 	ospSet3fv(camera, "up", &cam_up.x);
 	ospSet3fv(camera, "dir", &cam_dir.x);
+	ospSet1f(camera, "fovy", cam_fovy);
 	ospCommit(camera);
 
 	// For distributed rendering we must use the MPI raycaster
@@ -170,7 +188,7 @@ int main(int argc, char **argv) {
 		process_order.push_back(b.owner);
 	}
 	if (rank == 0) { 
-		std::cout << "Composite order: {";
+		std::cout << "Composite order: { ";
 		for (auto &x : process_order) {
 			std::cout << x << " ";
 		}
@@ -182,21 +200,35 @@ int main(int argc, char **argv) {
 	icetAddTile(0, 0, img_size.x, img_size.y, 0);
 	icetStrategy(ICET_STRATEGY_REDUCE);
 
-	// TODO: Tell IceT the bounding box of our volume in world space.
+	// Tell IceT the bounding box of our volume in world space.
 	// This also requires us to give it a real projection and view matrix
 	// that it can use to project the box to the screen.
-	// icetBoundingBoxf(bounds.lower.x, bounds.upper.x, bounds.lower.y, bounds.upper.y,
-	// 					bounds.lower.z, bounds.upper.z);
+	//icetBoundingBoxf(bounds.lower.x, bounds.upper.x, bounds.lower.y, bounds.upper.y,
+	//		bounds.lower.z, bounds.upper.z);
 
 	icetDrawCallback(ospray_draw_callback);
-	std::array<double, 16> fake_mat = {
+	std::array<double, 16> icet_proj = {
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	};
+	std::array<double, 16> icet_view = {
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1
 	};
 	const std::array<float, 4> icet_bgcolor = {0.1f, 0.1f, 0.1f, 0.0f};
-	auto icet_img = icetDrawFrame(fake_mat.data(), fake_mat.data(), icet_bgcolor.data());
+	compute_icet_matrices(cam_pos, cam_up, cam_dir, cam_fovy, icet_proj, icet_view);
+	if (rank == 0) {
+		std::cout << "Proj mat: ";
+		print_mat4(icet_proj.data());
+		std::cout << "View mat: ";
+		print_mat4(icet_view.data());
+	}
+
+	auto icet_img = icetDrawFrame(icet_proj.data(), icet_view.data(), icet_bgcolor.data());
 
 	if (rank == 0) {
 		//const uint32_t *img = static_cast<const uint32_t*>(ospMapFrameBuffer(framebuffer, OSP_FB_COLOR));
@@ -220,10 +252,69 @@ int main(int argc, char **argv) {
 void ospray_draw_callback(const double *proj_mat, const double *modelview_mat,
 		const float *bg_color, const int *readback_viewport, IceTImage result)
 {
+	std::cout << "Rank " << rank << " is rendering\n";
 	ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
 	const uint8_t *img = static_cast<const uint8_t*>(ospMapFrameBuffer(framebuffer, OSP_FB_COLOR));
 	uint8_t *output = icetImageGetColorub(result);
 	std::memcpy(output, img, img_size.x * img_size.y * sizeof(uint32_t));
 	ospUnmapFrameBuffer(img, framebuffer);
+}
+void compute_icet_matrices(const vec3f &cam_pos, const vec3f &cam_up, const vec3f &cam_dir,
+		const float cam_fovy, std::array<double, 16> &proj, std::array<double, 16> &view)
+{
+	// IceT matrices are OpenGL style (column major, right handed), though when I compute
+	// them as in OpenGL I don't seem to always get what I expect.
+	{
+		vec3f f = normalize(cam_dir);
+		vec3f s = cross(f, normalize(cam_up));
+		vec3f u = cross(normalize(s), f);
+		if (rank == 0) {
+			std::cout << "f = " << f
+				<< "\ns = " << s
+				<< "\nu = " << u
+				<< "\n";
+		}
+
+		for (int i = 0; i < 3; ++i) {
+			view[i * 4] = s[i];
+			view[i * 4 + 1] = u[i];
+			view[i * 4 + 2] = -f[i];
+			view[i * 4 + 3] = 0;
+		}
+
+		view[3] = 0;
+		view[7] = 0;
+		view[11] = 0;
+
+		view[12] = -cam_pos[0];
+		view[13] = -cam_pos[1];
+		view[14] = -cam_pos[2];
+		view[15] = 1;
+	}
+
+	{
+		const float f = 1.f / std::tan(cam_fovy * 0.5 * 0.01745329251994329576923690768489);
+		const float z_near = 1;
+		const float z_far = 1000;
+		proj[0] = (f * img_size.y) / img_size.x;
+		proj[1] = 0;
+		proj[2] = 0;
+		proj[3] = 0;
+
+		proj[4] = 0;
+		proj[5] = f;
+		proj[6] = 0;
+		proj[7] = 0;
+
+		proj[8] = 0;
+		proj[9] = 0;
+		proj[10] = (z_far + z_near) / (z_near - z_far);
+		proj[11] = -1;
+
+		proj[12] = 0;
+		proj[13] = 0;
+		proj[14] = -(2.0 * z_far * z_near) / (z_near - z_far);
+		proj[15] = 0;
+	}
 }
 
