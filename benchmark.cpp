@@ -20,6 +20,9 @@ using namespace ospcommon;
 
 int world_size, rank;
 const vec2i img_size(1024, 1024);
+// These need to be globals b/c IceT
+OSPFrameBuffer framebuffer;
+OSPRenderer renderer;
 
 void ospray_draw_callback(const double *proj_mat, const double *modelview_mat,
 		const float *bg_color, const int *readback_viewport, IceTImage result);
@@ -33,14 +36,16 @@ int main(int argc, char **argv) {
 	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+	/*
 	if (ospLoadModule("mpi") != OSP_NO_ERROR) {
 		throw std::runtime_error("Failed to load OSPRay MPI module");
 	}
+	*/
 
 	// If we're using IceT to composite we use OSPRay in its local rendering mode
 	OSPDevice device = ospNewDevice("default");
 	//OSPDevice device = ospNewDevice("mpi_distributed");
-	ospDeviceSet1i(device, "masterRank", 0);
+	//ospDeviceSet1i(device, "masterRank", 0);
 	ospDeviceSetStatusFunc(device, [](const char *msg) { std::cout << msg << "\n"; });
 	ospDeviceCommit(device);
 	ospSetCurrentDevice(device);
@@ -97,9 +102,11 @@ int main(int argc, char **argv) {
 	// For correct compositing we must specify a list of regions that bound the
 	// data owned by this rank. These region bounds will be used for sort-last
 	// compositing when rendering.
+	/*
 	const box3f bounds(grid_origin, grid_origin + vec3f(brick_dims));
 	OSPData region_data = ospNewData(2, OSP_FLOAT3, &bounds);
 	ospSetData(model, "regions", region_data);
+	*/
 
 	ospCommit(model);
 
@@ -124,16 +131,17 @@ int main(int argc, char **argv) {
 	ospCommit(camera);
 
 	// For distributed rendering we must use the MPI raycaster
-	OSPRenderer renderer = ospNewRenderer("mpi_raycast");
+	//renderer = ospNewRenderer("mpi_raycast");
+	renderer = ospNewRenderer("scivis");
 	// Setup the parameters for the renderer
-	ospSet1i(renderer, "spp", 1);
-	ospSet1f(renderer, "bgColor", 1.f);
+	ospSet1i(renderer, "spp", 4);
+	ospSet1f(renderer, "bgColor", 0.f);
 	ospSetObject(renderer, "model", model);
 	ospSetObject(renderer, "camera", camera);
 	ospCommit(renderer);
 
 	// Create a framebuffer to render the image too
-	OSPFrameBuffer framebuffer = ospNewFrameBuffer((osp::vec2i&)img_size, OSP_FB_SRGBA,
+	framebuffer = ospNewFrameBuffer((osp::vec2i&)img_size, OSP_FB_RGBA8,
 			OSP_FB_COLOR | OSP_FB_ACCUM);
 	ospFrameBufferClear(framebuffer, OSP_FB_COLOR);
 
@@ -143,6 +151,7 @@ int main(int argc, char **argv) {
 	auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
 	auto icet_context = icetCreateContext(icet_comm);
 	// Setup IceT for alpha-blending compositing
+	icetStrategy(ICET_STRATEGY_REDUCE);
 	icetEnable(ICET_ORDERED_COMPOSITE);
 	icetEnable(ICET_CORRECT_COLORED_BACKGROUND);
 	icetCompositeMode(ICET_COMPOSITE_MODE_BLEND);
@@ -157,16 +166,14 @@ int main(int argc, char **argv) {
 		}
 	);
 	std::vector<int> process_order;
-	if (rank == 0) {
-		std::cout << "Process composite order: {";
-	}
 	for (auto &b : volume_bricks) {
 		process_order.push_back(b.owner);
-		if (rank == 0) {
-			std::cout << b.owner << " ";
-		}
 	}
-	if (rank == 0) {
+	if (rank == 0) { 
+		std::cout << "Composite order: {";
+		for (auto &x : process_order) {
+			std::cout << x << " ";
+		}
 		std::cout << "}\n";
 	}
 	icetCompositeOrder(process_order.data());
@@ -188,7 +195,7 @@ int main(int argc, char **argv) {
 		0, 0, 1, 0,
 		0, 0, 0, 1
 	};
-	std::array<float, 4> icet_bgcolor = {0.1f, 0.1f, 0.1f, 0.1f};
+	const std::array<float, 4> icet_bgcolor = {0.1f, 0.1f, 0.1f, 0.0f};
 	auto icet_img = icetDrawFrame(fake_mat.data(), fake_mat.data(), icet_bgcolor.data());
 
 	if (rank == 0) {
@@ -213,24 +220,10 @@ int main(int argc, char **argv) {
 void ospray_draw_callback(const double *proj_mat, const double *modelview_mat,
 		const float *bg_color, const int *readback_viewport, IceTImage result)
 {
-	const vec2i img_grid = compute_grid2d(world_size);
-	const vec2i tile_id(rank % img_grid.x, rank / img_grid.x);
-	const vec2i tile_size = img_size / img_grid;
-	const vec2i tile_origin = tile_id * tile_size;
-	const vec3f rank_color = hsv_to_rgb((360.f * rank) / world_size, 0.8, (rank + 1.f) / world_size);
-
-	uint8_t *img = icetImageGetColorub(result);
-	for (int j = 0; j < tile_size.y; ++j) {
-		const int y = j + tile_origin.y;
-		for (int i = 0; i < tile_size.x; ++i) {
-			const int x = i + tile_origin.x;
-			uint8_t *pixel = &img[(y * img_size.x + x) * 4];
-			for (int c = 0; c < 3; ++c) {
-				pixel[c] = clamp(static_cast<uint8_t>(rank_color[c] * 255.f),
-						uint8_t(0), uint8_t(255));
-			}
-			pixel[3] = 255;
-		}
-	}
+	ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
+	const uint8_t *img = static_cast<const uint8_t*>(ospMapFrameBuffer(framebuffer, OSP_FB_COLOR));
+	uint8_t *output = icetImageGetColorub(result);
+	std::memcpy(output, img, img_size.x * img_size.y * sizeof(uint32_t));
+	ospUnmapFrameBuffer(img, framebuffer);
 }
 
