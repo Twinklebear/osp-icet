@@ -1,8 +1,44 @@
 #include <cstdio>
-#include <vector>
+#include <limits>
 #include "util.h"
 
 using namespace ospcommon;
+
+VolumeBrick::VolumeBrick(const vec3i &id, const vec3i &dims, int owner)
+	: id(id), origin(id * dims), dims(dims), owner(owner)
+{}
+float VolumeBrick::max_distance_from(const ospcommon::vec3f &p) const {
+	// Need to check along (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0),
+	// (1, 0, 1), (0, 1, 1), (1, 1, 1) directions for each corner
+	static const std::array<vec3f, 8> dirs = {
+		vec3f(0, 0, 0), vec3f(1, 0, 0), vec3f(0, 1, 0), vec3f(0, 0, 1),
+		vec3f(1, 1, 0), vec3f(1, 0, 1), vec3f(0, 1, 1), vec3f(1, 1, 1)
+	};
+	float max_dist = std::numeric_limits<float>::lowest();
+	for (const auto &d : dirs){
+		max_dist = std::max(length(vec3f(origin) + d * vec3f(dims) - p), max_dist);
+	}
+	return max_dist;
+}
+std::vector<VolumeBrick> VolumeBrick::compute_grid_bricks(const vec3i &grid, const vec3i &brick_dims) {
+	std::vector<VolumeBrick> bricks;
+	int owner = 0;
+	for (int z = 0; z < grid.z; ++z) {
+		for (int y = 0; y < grid.y; ++y) {
+			for (int x = 0; x < grid.x; ++x) {
+				bricks.emplace_back(vec3i(x, y, z), brick_dims, owner++);
+			}
+		}
+	}
+	return bricks;
+}
+std::ostream& operator<<(std::ostream &os, const VolumeBrick &b) {
+	os << "VolumeBrick { id: " << b.id
+		<< ", origin: " << b.origin
+		<< ", dims: " << b.dims
+		<< ", owner: " << b.owner << " }";
+	return os;
+}
 
 void write_ppm(const std::string &file_name, const int width, const int height,
 		const uint32_t *img)

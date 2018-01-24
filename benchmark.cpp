@@ -72,23 +72,23 @@ int main(int argc, char **argv) {
 	// Setup our piece of the volume data, each rank has some brick of
 	// volume data within the [0, 1] box
 	OSPVolume volume = ospNewVolume("block_bricked_volume");
-	const vec3i volume_dims(64);
+	const vec3i brick_dims(64);
 	const vec3i grid = compute_grid3d(world_size);
 	const vec3i brick_id(rank % grid.x,
 			(rank / grid.x) % grid.y, rank / (grid.x * grid.y));
 
 	// We use the grid_origin to translate the bricks to the right location
 	// in the space.
-	const vec3f grid_origin = vec3f(brick_id) * vec3f(volume_dims);
+	const vec3f grid_origin = vec3f(brick_id) * vec3f(brick_dims);
 
 	ospSetString(volume, "voxelType", "uchar");
-	ospSetVec3i(volume, "dimensions", (osp::vec3i&)volume_dims);
+	ospSetVec3i(volume, "dimensions", (osp::vec3i&)brick_dims);
 	ospSetVec3f(volume, "gridOrigin", (osp::vec3f&)grid_origin);
 	ospSetObject(volume, "transferFunction", transfer_fcn);
 
-	std::vector<unsigned char> volume_data(volume_dims.x * volume_dims.y * volume_dims.z,
+	std::vector<unsigned char> volume_data(brick_dims.x * brick_dims.y * brick_dims.z,
 			static_cast<unsigned char>(rank));
-	ospSetRegion(volume, volume_data.data(), osp::vec3i{0, 0, 0}, (osp::vec3i&)volume_dims);
+	ospSetRegion(volume, volume_data.data(), osp::vec3i{0, 0, 0}, (osp::vec3i&)brick_dims);
 	ospCommit(volume);
 
 	OSPModel model = ospNewModel();
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
 	// For correct compositing we must specify a list of regions that bound the
 	// data owned by this rank. These region bounds will be used for sort-last
 	// compositing when rendering.
-	const box3f bounds(grid_origin, grid_origin + vec3f(volume_dims));
+	const box3f bounds(grid_origin, grid_origin + vec3f(brick_dims));
 	OSPData region_data = ospNewData(2, OSP_FLOAT3, &bounds);
 	ospSetData(model, "regions", region_data);
 
@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
 	const vec3f world_diagonal = vec3f((world_size - 1) % grid.x,
 			((world_size - 1) / grid.x) % grid.y,
 			(world_size - 1) / (grid.x * grid.y))
-		* vec3f(volume_dims) + vec3f(volume_dims);
+		* vec3f(brick_dims) + vec3f(brick_dims);
 
 	const vec3f cam_pos = world_diagonal * vec3f(1.5);
 	const vec3f cam_up(0, 1, 0);
@@ -150,9 +150,24 @@ int main(int argc, char **argv) {
 	icetSetDepthFormat(ICET_IMAGE_DEPTH_NONE);
 
 	// Compute the sort order for the ranks and give it to IceT
+	std::vector<VolumeBrick> volume_bricks = VolumeBrick::compute_grid_bricks(grid, brick_dims);
+	std::sort(volume_bricks.begin(), volume_bricks.end(),
+		[&](const VolumeBrick &a, const VolumeBrick &b) {
+			return a.max_distance_from(cam_pos) < b.max_distance_from(cam_pos);
+		}
+	);
 	std::vector<int> process_order;
-	for (int i = 0; i < world_size; ++i) {
-		process_order.push_back(i);
+	if (rank == 0) {
+		std::cout << "Process composite order: {";
+	}
+	for (auto &b : volume_bricks) {
+		process_order.push_back(b.owner);
+		if (rank == 0) {
+			std::cout << b.owner << " ";
+		}
+	}
+	if (rank == 0) {
+		std::cout << "}\n";
 	}
 	icetCompositeOrder(process_order.data());
 
