@@ -214,9 +214,7 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
-void ospray_draw_callback(const double*, const double*, const float*, const int*, IceTImage result)
-{
-	std::cout << "Rank " << rank << " is rendering\n";
+void ospray_draw_callback(const double*, const double*, const float*, const int*, IceTImage result) {
 	ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
 	const uint8_t *img = static_cast<const uint8_t*>(ospMapFrameBuffer(framebuffer, OSP_FB_COLOR));
 	uint8_t *output = icetImageGetColorub(result);
