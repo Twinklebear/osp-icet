@@ -16,13 +16,15 @@
 #include <IceT.h>
 #include <IceTMPI.h>
 #include "util.h"
+#include "pico_bench.h"
 
 using namespace ospcommon;
 using namespace std::chrono;
 
 int world_size, rank;
-const vec2i img_size(1024, 1024);
-bool use_ospray_compositing;
+vec2i img_size(1024, 1024);
+bool use_ospray_compositing = true;
+size_t benchmark_iters = 1;
 // These need to be globals b/c IceT
 OSPFrameBuffer framebuffer;
 OSPRenderer renderer;
@@ -33,11 +35,22 @@ void write_ppm(const std::string &file_name, const int width, const int height,
 		const uint32_t *img);
 
 int main(int argc, char **argv) {
-	if (argc < 2) {
-		std::cerr << "Usage: " << argv[0] << " (ospray|icet)\n";
+	std::vector<std::string> args{argv, argv + argc};
+	if (std::find(args.begin(), args.end(), "-compositor") == args.end()) {
+		std::cerr << "A compositor to benchmark is required (-compositor (ospray|icet)\n";
 		return 1;
 	}
-	use_ospray_compositing = std::strcmp(argv[1], "ospray") == 0;
+
+	for (size_t i = 0; i < args.size(); ++i) {
+		if (args[i] == "-compositor") {
+			use_ospray_compositing = args[++i] == "ospray";
+		} else if (args[i] == "-img") {
+			img_size.x = std::stoi(args[++i]);
+			img_size.y = std::stoi(args[++i]);
+		} else if (args[i] == "-n") {
+			benchmark_iters = std::stoi(args[++i]);
+		}
+	}
 
 	int provided = 0;
 	MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
@@ -45,7 +58,13 @@ int main(int argc, char **argv) {
 	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-	if (use_ospray_compositing && ospLoadModule("mpi") != OSP_NO_ERROR) {
+	if (rank == 0) {
+		std::cout << "Benchmarking " << (use_ospray_compositing ? "ospray" : "icet")
+			<< " compositing at " << img_size.x << "x" << img_size.y
+			<< " for " << benchmark_iters << " samples\n";
+	}
+
+	if (ospLoadModule("mpi") != OSP_NO_ERROR) {
 		throw std::runtime_error("Failed to load OSPRay MPI module");
 	}
 
@@ -148,7 +167,7 @@ int main(int argc, char **argv) {
 		renderer = ospNewRenderer("mpi_raycast");
 		ospSet1f(renderer, "bgColor", 0.1f);
 	} else {
-		renderer = ospNewRenderer("scivis");
+		renderer = ospNewRenderer("mpi_raycast");
 		ospSet1f(renderer, "bgColor", 0.0f);
 	}
 	// Setup the parameters for the renderer
@@ -163,12 +182,15 @@ int main(int argc, char **argv) {
 	ospFrameBufferClear(framebuffer, OSP_FB_COLOR);
 
 	IceTImage icet_img;
-	high_resolution_clock::time_point start_render, end_render;
+	pico_bench::Benchmarker<milliseconds> bencher(benchmark_iters);
+	pico_bench::Statistics<milliseconds> stats({});
+	stats.time_suffix = "ms";
+
 	// Render the image and save it out
 	if (use_ospray_compositing) {
-		start_render = high_resolution_clock::now();
-		ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
-		end_render = high_resolution_clock::now();
+		stats = bencher([&](){
+			ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
+		});
 	} else {
 		auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
 		auto icet_context = icetCreateContext(icet_comm);
@@ -205,18 +227,19 @@ int main(int argc, char **argv) {
 			0, 0, 0, 1
 		};
 		const std::array<float, 4> icet_bgcolor = {0.1f, 0.1f, 0.1f, 0.0f};
-		start_render = high_resolution_clock::now();
-		icet_img = icetDrawFrame(identity_mat.data(), identity_mat.data(), icet_bgcolor.data());
-		end_render = high_resolution_clock::now();
+
+		stats = bencher([&](){
+			icet_img = icetDrawFrame(identity_mat.data(), identity_mat.data(), icet_bgcolor.data());
+		});
 	}
 
 	if (rank == 0) {
 		if (use_ospray_compositing) {
-			std::cout << "OSPRay rendering + compositing took: ";
+			std::cout << "OSPRay rendering + compositing:\n";
 		} else {
-			std::cout << "OSPRay rendering + IceT compositing took: ";
+			std::cout << "OSPRay rendering + IceT compositing:\n";
 		}
-		std::cout << duration_cast<milliseconds>(end_render - start_render).count() << "ms\n";
+		std::cout << stats << "\n";
 
 		const uint32_t *img = nullptr;
 		if (use_ospray_compositing) {
