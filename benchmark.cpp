@@ -184,9 +184,8 @@ int main(int argc, char **argv) {
 	IceTImage icet_img = icetImageNull();
 	pico_bench::Benchmarker<milliseconds> bencher(benchmark_iters);
 	pico_bench::Statistics<milliseconds> stats({});
-	stats.time_suffix = "ms";
 
-  IceTContext icet_context;
+	IceTContext icet_context;
 
 	// Render the image and save it out
 	if (use_ospray_compositing) {
@@ -241,6 +240,7 @@ int main(int argc, char **argv) {
 		} else {
 			std::cout << "OSPRay rendering + IceT compositing:\n";
 		}
+		stats.time_suffix = "ms";
 		std::cout << stats << std::endl;
 
 		const uint32_t *img = nullptr;
@@ -253,7 +253,7 @@ int main(int argc, char **argv) {
 		std::string fname = use_ospray_compositing ? "ospray_" : "ospray_icet_";
 		fname += std::to_string(grid.x) + "x" + std::to_string(grid.y) + "x"
 			+ std::to_string(grid.z) + "-" + std::to_string(img_size.x)
-      + "x" + std::to_string(img_size.y) + ".ppm";
+			+ "x" + std::to_string(img_size.y) + ".ppm";
 		write_ppm(fname, img_size.x, img_size.y, img);
 
 		std::cout << "Image saved to '" << fname << "'\n";
@@ -262,9 +262,9 @@ int main(int argc, char **argv) {
 		}
 	}
 
-  if (!use_ospray_compositing) {
-    icetDestroyContext(icet_context);
-  }
+	if (!use_ospray_compositing) {
+		icetDestroyContext(icet_context);
+	}
 	// Clean up all our objects
 	ospFreeFrameBuffer(framebuffer);
 	ospRelease(renderer);
