@@ -181,10 +181,12 @@ int main(int argc, char **argv) {
 			OSP_FB_COLOR | OSP_FB_ACCUM);
 	ospFrameBufferClear(framebuffer, OSP_FB_COLOR);
 
-	IceTImage icet_img;
+	IceTImage icet_img = icetImageNull();
 	pico_bench::Benchmarker<milliseconds> bencher(benchmark_iters);
 	pico_bench::Statistics<milliseconds> stats({});
 	stats.time_suffix = "ms";
+
+  IceTContext icet_context;
 
 	// Render the image and save it out
 	if (use_ospray_compositing) {
@@ -193,7 +195,7 @@ int main(int argc, char **argv) {
 		});
 	} else {
 		auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
-		auto icet_context = icetCreateContext(icet_comm);
+		icet_context = icetCreateContext(icet_comm);
 		// Setup IceT for alpha-blending compositing
 		icetStrategy(ICET_STRATEGY_REDUCE);
 		icetEnable(ICET_ORDERED_COMPOSITE);
@@ -239,7 +241,7 @@ int main(int argc, char **argv) {
 		} else {
 			std::cout << "OSPRay rendering + IceT compositing:\n";
 		}
-		std::cout << stats << "\n";
+		std::cout << stats << std::endl;
 
 		const uint32_t *img = nullptr;
 		if (use_ospray_compositing) {
@@ -259,6 +261,9 @@ int main(int argc, char **argv) {
 		}
 	}
 
+  if (!use_ospray_compositing) {
+    icetDestroyContext(icet_context);
+  }
 	// Clean up all our objects
 	ospFreeFrameBuffer(framebuffer);
 	ospRelease(renderer);
