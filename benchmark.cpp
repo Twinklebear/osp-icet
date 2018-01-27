@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 	if (rank == 0) {
 		std::cout << "Benchmarking " << (use_ospray_compositing ? "ospray" : "icet")
 			<< " compositing at " << img_size.x << "x" << img_size.y
-			<< " for " << benchmark_iters << " samples\n";
+			<< " for " << benchmark_iters << " samples" << std::endl;
 	}
 
 	if (ospLoadModule("mpi") != OSP_NO_ERROR) {
@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
 			+ "x" + std::to_string(img_size.y) + ".ppm";
 		write_ppm(fname, img_size.x, img_size.y, img);
 
-		std::cout << "Image saved to '" << fname << "'\n";
+		std::cout << "Image saved to '" << fname << "'" << std::endl;
 		if (use_ospray_compositing) {
 			ospUnmapFrameBuffer(img, framebuffer);
 		}
