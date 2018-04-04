@@ -63,7 +63,7 @@ if len(sys.argv) < 3:
     print("Usage: {} <plot var> <directory>".format(sys.argv[0]))
     sys.exit(1)
 
-parse_fname = re.compile("bench_(\w+)_(\d+)n_(\d+)x(\d+)\.txt")
+parse_fname = re.compile("bench_(\w+)_(\d+)n_(\d+)x(\d+).*\.txt")
 parse_max = re.compile("max: (\d+)")
 parse_min = re.compile("min: (\d+)")
 parse_median = re.compile("median: (\d+)")
@@ -142,6 +142,7 @@ for res,series in scaling_runs.items():
     else:
         plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2)
 
+ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
 plt.title("Scaling Runs on  ({} time)".format(plot_var))
 plt.ylabel("Rendering + Compositing (ms)")
 plt.xlabel("Nodes")
