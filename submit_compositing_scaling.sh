@@ -2,14 +2,19 @@
 
 export IMAGE_SIZE_X=1024
 export IMAGE_SIZE_Y=1024
-export BENCH_ITERS=200
+export BENCH_ITERS=150
 
 export CLUSTER_NAME="`hostname -d`"
 if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
-	export OSPRAY_THREADS=68
 	export MACHINE=stampede2
 	export TACC=true
-	export JOB_QUEUE=normal
+	if [ "$1" == "skx-normal" ]; then
+		export OSPRAY_THREADS=48
+		export JOB_QUEUE=skx-normal
+	else
+		export OSPRAY_THREADS=68
+		export JOB_QUEUE=normal
+	fi
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
 	export OSPRAY_THREADS=20
 	export MACHINE=ls5
