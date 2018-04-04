@@ -64,6 +64,7 @@ int main(int argc, char **argv) {
 			<< " for " << benchmark_iters << " samples" << std::endl;
 	}
 
+	ospLoadModule("ispc");
 	if (ospLoadModule("mpi") != OSP_NO_ERROR) {
 		throw std::runtime_error("Failed to load OSPRay MPI module");
 	}
@@ -196,7 +197,7 @@ int main(int argc, char **argv) {
 		auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
 		icet_context = icetCreateContext(icet_comm);
 		// Setup IceT for alpha-blending compositing
-		icetStrategy(ICET_STRATEGY_REDUCE);
+		icetSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_AUTOMATIC);
 		icetEnable(ICET_ORDERED_COMPOSITE);
 		icetEnable(ICET_CORRECT_COLORED_BACKGROUND);
 		icetCompositeMode(ICET_COMPOSITE_MODE_BLEND);
