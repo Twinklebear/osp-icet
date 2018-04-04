@@ -20,4 +20,5 @@ ispc
 *.out
 *.o
 *_ispc.h
+*.png
 
