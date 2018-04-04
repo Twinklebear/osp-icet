@@ -46,6 +46,7 @@ for c in "${compositors[@]}"; do
 
 		if [ -n "$TACC" ]; then
 			export TACC_ARGS="-A OSPRay -p $JOB_QUEUE"
+			job_title="${job_title}-$JOB_QUEUE"
 		fi
 		if [ -n "`command -v sbatch`" ]; then
 			sbatch -n $i -N $i --ntasks-per-node=1 -t 00:20:00 \

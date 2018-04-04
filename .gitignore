@@ -21,4 +21,5 @@ ispc
 *.o
 *_ispc.h
 *.png
+bench_*.txt
 
