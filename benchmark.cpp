@@ -267,7 +267,7 @@ int main(int argc, char **argv) {
 		icetDestroyContext(icet_context);
 	}
 	// Clean up all our objects
-	ospFreeFrameBuffer(framebuffer);
+	ospRelease(framebuffer);
 	ospRelease(renderer);
 	ospRelease(camera);
 	ospRelease(model);

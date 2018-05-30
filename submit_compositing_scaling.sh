@@ -1,8 +1,8 @@
 #!/bin/bash
 
-export IMAGE_SIZE_X=1024
-export IMAGE_SIZE_Y=1024
-export BENCH_ITERS=150
+export IMAGE_SIZE_X=2048
+export IMAGE_SIZE_Y=2048
+export BENCH_ITERS=200
 export I_MPI_PIN_DOMAIN=node
 
 export CLUSTER_NAME="`hostname -d`"
@@ -38,7 +38,7 @@ fi
 script_dir=$(dirname $(readlink -f $0))
 
 compositors=(ospray icet)
-node_counts=(2 4 8 16 32)
+node_counts=(16)
 for c in "${compositors[@]}"; do
 	export BENCH_COMPOSITOR=$c
 	for i in "${node_counts[@]}"; do
