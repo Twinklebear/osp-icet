@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Usage:
+# ./submit_compositing_scaling <queue>
+
 export IMAGE_SIZE_X=2048
 export IMAGE_SIZE_Y=2048
 export BENCH_ITERS=200
@@ -38,7 +41,7 @@ fi
 script_dir=$(dirname $(readlink -f $0))
 
 compositors=(ospray icet)
-node_counts=(16)
+node_counts=(2 4 8 16 32)
 for c in "${compositors[@]}"; do
 	export BENCH_COMPOSITOR=$c
 	for i in "${node_counts[@]}"; do
@@ -52,7 +55,7 @@ for c in "${compositors[@]}"; do
 			sbatch -n $i -N $i --ntasks-per-node=1 -t 00:20:00 \
 				$TACC_ARGS \
 				-S $OSPRAY_THREADS \
-				-J $job_title -o ${job_title}.txt \
+				-J $job_title -o ${job_title}-%j.txt \
 				${script_dir}/run_compositing_bench.sh
 		elif [ -n "`command -v qsub`" ]; then
 			# A lot of crap for theta and qsub because cobalt is
@@ -60,7 +63,7 @@ for c in "${compositors[@]}"; do
 			THETA_JOB_NODES=$(( $i > 8 ? $i : 8 ))
 			export THETA_USE_NODES=$i
 			qsub -n $THETA_JOB_NODES -t 00:30:00 -A Viz_Support \
-				-o ${job_title}.txt \
+				-N ${job_title} \
 				--env "MACHINE=$MACHINE" \
 				--env "OSPRAY_THREADS=$OSPRAY_THREADS" \
 				--env "IMAGE_SIZE_X=$IMAGE_SIZE_X" \
