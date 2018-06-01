@@ -29,6 +29,13 @@ size_t benchmark_iters = 1;
 OSPFrameBuffer framebuffer;
 OSPRenderer renderer;
 
+struct DistributedRegion {
+	box3f bounds;
+	int id;
+
+	DistributedRegion(box3f bounds, int id) : bounds(bounds), id(id) {}
+};
+
 void ospray_draw_callback(const double *proj_mat, const double *modelview_mat,
 		const float *bg_color, const int *readback_viewport, IceTImage result);
 void write_ppm(const std::string &file_name, const int width, const int height,
@@ -134,9 +141,9 @@ int main(int argc, char **argv) {
 	// For correct compositing we must specify a list of regions that bound the
 	// data owned by this rank. These region bounds will be used for sort-last
 	// compositing when rendering.
-	const box3f bounds(grid_origin, grid_origin + vec3f(brick_dims));
+	const DistributedRegion region_info(box3f(grid_origin, grid_origin + vec3f(brick_dims)), rank);
 	if (use_ospray_compositing) {
-		OSPData region_data = ospNewData(2, OSP_FLOAT3, &bounds);
+		OSPData region_data = ospNewData(sizeof(region_info), OSP_RAW, &region_info);
 		ospSetData(model, "regions", region_data);
 	}
 	ospCommit(model);
