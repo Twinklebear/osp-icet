@@ -9,6 +9,7 @@
 #include <string>
 #include <array>
 #include <cstdio>
+#include <unistd.h>
 #include <mpi.h>
 #include <ospray/ospray.h>
 #include <ospray/ospcommon/vec.h>
@@ -69,6 +70,15 @@ int main(int argc, char **argv) {
 		std::cout << "Benchmarking " << (use_ospray_compositing ? "ospray" : "icet")
 			<< " compositing at " << img_size.x << "x" << img_size.y
 			<< " for " << benchmark_iters << " samples" << std::endl;
+	}
+
+	char hostname[512] = {0};
+	gethostname(hostname, 511);
+	for (int i = 0; i < world_size; ++i) {
+		if (i == rank) {
+			std::cout << "Rank " << i << " is on " << hostname << "\n";
+		}
+		MPI_Barrier(MPI_COMM_WORLD);
 	}
 
 	ospLoadModule("ispc");
