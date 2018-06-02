@@ -171,13 +171,9 @@ int main(int argc, char **argv) {
 	ospCommit(camera);
 
 	// For distributed rendering we must use the MPI raycaster
-	if (use_ospray_compositing) {
-		renderer = ospNewRenderer("mpi_raycast");
-		ospSet1f(renderer, "bgColor", 0.1f);
-	} else {
-		renderer = ospNewRenderer("mpi_raycast");
-		ospSet1f(renderer, "bgColor", 0.0f);
-	}
+	renderer = ospNewRenderer("mpi_raycast");
+	ospSet1f(renderer, "bgColor", 0.1f);
+
 	// Setup the parameters for the renderer
 	ospSet1i(renderer, "spp", 1);
 	ospSetObject(renderer, "model", model);
@@ -286,7 +282,19 @@ int main(int argc, char **argv) {
 	return 0;
 }
 void ospray_draw_callback(const double*, const double*, const float*, const int*, IceTImage result) {
+	auto startRender = high_resolution_clock::now();
 	ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
+	auto endRender = high_resolution_clock::now();
+
+	const int renderTime = duration_cast<milliseconds>(endRender - startRender).count();
+	int maxTime = 0, minTime = 0;
+	MPI_Reduce(&renderTime, &maxTime, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+	MPI_Reduce(&renderTime, &minTime, 1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
+	if (rank == 0) {
+		std::cout << "IceT Max OSPRay render time: " << maxTime
+			<< "ms\nIceT Min OSPRay render time: " << minTime << "ms\n";
+	}
+
 	const uint8_t *img = static_cast<const uint8_t*>(ospMapFrameBuffer(framebuffer, OSP_FB_COLOR));
 	uint8_t *output = icetImageGetColorub(result);
 	std::memcpy(output, img, img_size.x * img_size.y * sizeof(uint32_t));
