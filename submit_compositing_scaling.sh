@@ -6,17 +6,16 @@
 export IMAGE_SIZE_X=2048
 export IMAGE_SIZE_Y=2048
 export BENCH_ITERS=200
-export I_MPI_PIN_DOMAIN=node
 
 export CLUSTER_NAME="`hostname -d`"
 if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 	export MACHINE=stampede2
 	export TACC=true
 	if [ "$1" == "skx-normal" ]; then
-		export OSPRAY_THREADS=48
+		export OSPRAY_THREADS=96
 		export JOB_QUEUE=skx-normal
 	else
-		export OSPRAY_THREADS=68
+		export OSPRAY_THREADS=66
 		export JOB_QUEUE=normal
 	fi
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
@@ -40,8 +39,8 @@ fi
 
 script_dir=$(dirname $(readlink -f $0))
 
-compositors=(ospray icet)
-node_counts=(2 4 8 16 32)
+compositors=(ospray)
+node_counts=(8 16 32)
 for c in "${compositors[@]}"; do
 	export BENCH_COMPOSITOR=$c
 	for i in "${node_counts[@]}"; do
