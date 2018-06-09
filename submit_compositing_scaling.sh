@@ -15,12 +15,16 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 	#export BUILD_DIR=$WORK/osp-icet/build-trace
 	export BUILD_DIR=$WORK/osp-icet/build
 	if [ "$1" == "skx-normal" ]; then
-		export OSPRAY_THREADS=95
+		export OSPRAY_THREADS=94
 		export JOB_QUEUE=skx-normal
 	else
 		export OSPRAY_THREADS=67
-		export JOB_QUEUE=normal
-		#export JOB_QUEUE=development
+		#export JOB_QUEUE=normal
+		export JOB_QUEUE=development
+		# Intel MPI progress thread - This gets rid of the performance
+		# hiccups on KNL and makes our performance more stable
+		export I_MPI_ASYNC_PROGRESS=1
+		export I_MPI_ASYNC_PROGRESS_PIN=1
 	fi
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
 	export OSPRAY_THREADS=20
@@ -48,7 +52,7 @@ fi
 
 script_dir=$(dirname $(readlink -f $0))
 
-compositors=(icet)
+compositors=(ospray)
 node_counts=(16)
 for c in "${compositors[@]}"; do
 	export BENCH_COMPOSITOR=$c
@@ -60,7 +64,7 @@ for c in "${compositors[@]}"; do
 			job_title="${job_title}-$JOB_QUEUE"
 		fi
 		if [ -n "`command -v sbatch`" ]; then
-			sbatch -n $i -N $i --ntasks-per-node=1 -t 00:20:00 \
+			sbatch -n $i -N $i --ntasks-per-node=1 -t 00:05:00 \
 				$TACC_ARGS \
 				-S $OSPRAY_THREADS \
 				-J $job_title -o ${job_title}-%j.txt \

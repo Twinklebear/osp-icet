@@ -4,6 +4,7 @@ export I_MPI_PIN_RESPECT_CPUSET=0
 export I_MPI_PIN_RESPECT_HCA=0
 export I_MPI_PIN_DOMAIN=node
 export I_MPI_PIN_PROCESSOR_LIST=allcores:map=scatter
+#export I_MPI_PIN_PROCESSOR_LIST=allcores:map=bunch
 export OSPRAY_SET_AFFINITY=0
 # TODO: PBS support for theta
 export OSPRAY_JOB_NAME=${SLURM_JOB_NAME}-${SLURM_JOBID}
@@ -23,8 +24,12 @@ if [ -n "$WORK_DIR" ]; then
 fi
 
 echo "OSPRAY_THREADS=$OSPRAY_THREADS"
-BENCH_ARGS="-compositor $BENCH_COMPOSITOR -n $BENCH_ITERS -img $IMAGE_SIZE_X $IMAGE_SIZE_Y"
+export BENCH_ARGS="-compositor $BENCH_COMPOSITOR -n $BENCH_ITERS -img $IMAGE_SIZE_X $IMAGE_SIZE_Y"
+
+printenv
+
 if [ -n "$TACC" ]; then
+	module restore
 	ibrun $TRACE_ARG $BUILD_DIR/benchmark $BENCH_ARGS
 elif [ "$MACHINE" == "wopr" ]; then
 	mpirun -np $SLURM_JOB_NUM_NODES -ppn 1 $BUILD_DIR/benchmark $BENCH_ARGS
