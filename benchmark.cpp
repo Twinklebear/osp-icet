@@ -206,6 +206,7 @@ int main(int argc, char **argv) {
 	if (use_ospray_compositing) {
 		int frame = 0;
 		stats = bencher([&](){
+			std::cout << "Starting frame " << frame << std::endl << std::flush;
 			ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
 			std::cout << "Finished frame " << frame << std::endl << std::flush;
 			++frame;
