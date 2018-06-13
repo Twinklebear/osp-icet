@@ -3,7 +3,7 @@
 export I_MPI_PIN_RESPECT_CPUSET=0
 export I_MPI_PIN_RESPECT_HCA=0
 export I_MPI_PIN_DOMAIN=node
-export I_MPI_PIN_PROCESSOR_LIST=allcores:map=scatter
+#export I_MPI_PIN_PROCESSOR_LIST=allcores:map=scatter
 #export I_MPI_PIN_PROCESSOR_LIST=allcores:map=bunch
 export OSPRAY_SET_AFFINITY=0
 # TODO: PBS support for theta
