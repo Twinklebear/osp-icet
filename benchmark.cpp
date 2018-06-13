@@ -204,8 +204,12 @@ int main(int argc, char **argv) {
 
 	// Render the image and save it out
 	if (use_ospray_compositing) {
+		int frame = 0;
 		stats = bencher([&](){
+			std::cout << "start frame " << frame << "\n" << std::flush;
 			ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
+			std::cout << "end frame " << frame << "\n" << std::flush;
+			++frame;
 		});
 	} else {
 		auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
