@@ -284,6 +284,9 @@ int main(int argc, char **argv) {
 	if (!use_ospray_compositing) {
 		icetDestroyContext(icet_context);
 	}
+
+	std::cout << std::flush;
+
 	// Clean up all our objects
 	ospRelease(framebuffer);
 	ospRelease(renderer);
