@@ -60,7 +60,7 @@ class ScalingRun:
             self.ospray.append(run)
 
 if len(sys.argv) < 3:
-    print("Usage: {} <plot var> <directory>".format(sys.argv[0]))
+    print("Usage: {} <plot var> <files>".format(sys.argv[0]))
     sys.exit(1)
 
 parse_fname = re.compile("bench_(\w+)_(\d+)n_(\d+)x(\d+).*\.txt")
@@ -71,12 +71,11 @@ parse_median_abs_dev = re.compile("median abs dev: (\d+)")
 parse_mean = re.compile("mean: (\d+)")
 parse_std_dev = re.compile("std dev: (\d+)")
 
-directory = sys.argv[2]
 plot_var = sys.argv[1]
 scaling_runs = {}
 
-for f in next(os.walk(directory))[2]:
-    m = parse_fname.match(f)
+for f in sys.argv[2:]:
+    m = parse_fname.search(f)
     if m:
         print("Parsing run log {}".format(f))
         resolution = "{}x{}".format(m.group(3), m.group(4))
@@ -84,7 +83,7 @@ for f in next(os.walk(directory))[2]:
         if not resolution in scaling_runs:
             scaling_runs[resolution] = ScalingRun(resolution)
 
-        with open(directory + "/" + f, 'r') as content:
+        with open(f, 'r') as content:
             for l in content:
                 m = parse_max.search(l)
                 if m:

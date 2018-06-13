@@ -3,21 +3,28 @@
 # Usage:
 # ./submit_compositing_scaling <queue>
 
-export IMAGE_SIZE_X=2048
-export IMAGE_SIZE_Y=2048
+export IMAGE_SIZE_X=1024
+export IMAGE_SIZE_Y=1024
 export BENCH_ITERS=200
-export I_MPI_PIN_DOMAIN=node
+export OSPRAY_DP_API_TRACING=0
 
 export CLUSTER_NAME="`hostname -d`"
 if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 	export MACHINE=stampede2
 	export TACC=true
+	#export BUILD_DIR=$WORK/osp-icet/build-trace
+	export BUILD_DIR=$WORK/osp-icet/build
 	if [ "$1" == "skx-normal" ]; then
-		export OSPRAY_THREADS=48
+		export OSPRAY_THREADS=47
 		export JOB_QUEUE=skx-normal
 	else
-		export OSPRAY_THREADS=68
+		export OSPRAY_THREADS=67
 		export JOB_QUEUE=normal
+		#export JOB_QUEUE=development
+		# Intel MPI progress thread - This gets rid of the performance
+		# hiccups on KNL and makes our performance more stable
+		#export I_MPI_ASYNC_PROGRESS=1
+		#export I_MPI_ASYNC_PROGRESS_PIN=1
 	fi
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
 	export OSPRAY_THREADS=20
@@ -38,10 +45,16 @@ elif [ "`hostname | head -c 5`" == "theta" ]; then
 	export MACHINE=theta
 fi
 
+if [ -z "$BUILD_DIR" ]; then
+	echo "Set the BUILD_DIR var!"
+	exit 1
+fi
+
 script_dir=$(dirname $(readlink -f $0))
 
-compositors=(ospray icet)
-node_counts=(2 4 8 16 32)
+compositors=(ospray)
+#node_counts=(2 4 8 16 32 64) # 128 256)
+node_counts=(16 32 64)
 for c in "${compositors[@]}"; do
 	export BENCH_COMPOSITOR=$c
 	for i in "${node_counts[@]}"; do
@@ -52,7 +65,7 @@ for c in "${compositors[@]}"; do
 			job_title="${job_title}-$JOB_QUEUE"
 		fi
 		if [ -n "`command -v sbatch`" ]; then
-			sbatch -n $i -N $i --ntasks-per-node=1 -t 00:20:00 \
+			sbatch -n $i -N $i --ntasks-per-node=1 -t 00:05:00 \
 				$TACC_ARGS \
 				-S $OSPRAY_THREADS \
 				-J $job_title -o ${job_title}-%j.txt \

@@ -9,6 +9,7 @@
 #include <string>
 #include <array>
 #include <cstdio>
+#include <unistd.h>
 #include <mpi.h>
 #include <ospray/ospray.h>
 #include <ospray/ospcommon/vec.h>
@@ -69,6 +70,15 @@ int main(int argc, char **argv) {
 		std::cout << "Benchmarking " << (use_ospray_compositing ? "ospray" : "icet")
 			<< " compositing at " << img_size.x << "x" << img_size.y
 			<< " for " << benchmark_iters << " samples" << std::endl;
+	}
+
+	char hostname[512] = {0};
+	gethostname(hostname, 511);
+	for (int i = 0; i < world_size; ++i) {
+		if (i == rank) {
+			std::cout << "Rank " << i << " is on " << hostname << "\n";
+		}
+		MPI_Barrier(MPI_COMM_WORLD);
 	}
 
 	ospLoadModule("ispc");
@@ -181,6 +191,7 @@ int main(int argc, char **argv) {
 	ospCommit(renderer);
 
 	// Create a framebuffer to render the image too
+	// TODO: Test the new gather stuff with fb accum
 	framebuffer = ospNewFrameBuffer((osp::vec2i&)img_size, OSP_FB_RGBA8,
 			OSP_FB_COLOR | OSP_FB_ACCUM);
 	ospFrameBufferClear(framebuffer, OSP_FB_COLOR);
@@ -193,8 +204,12 @@ int main(int argc, char **argv) {
 
 	// Render the image and save it out
 	if (use_ospray_compositing) {
+		int frame = 0;
 		stats = bencher([&](){
+			std::cout << "Starting frame " << frame << std::endl << std::flush;
 			ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
+			std::cout << "Finished frame " << frame << std::endl << std::flush;
+			++frame;
 		});
 	} else {
 		auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
@@ -269,6 +284,9 @@ int main(int argc, char **argv) {
 	if (!use_ospray_compositing) {
 		icetDestroyContext(icet_context);
 	}
+
+	std::cout << std::flush;
+
 	// Clean up all our objects
 	ospRelease(framebuffer);
 	ospRelease(renderer);
