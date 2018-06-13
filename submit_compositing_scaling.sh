@@ -63,7 +63,8 @@ for c in "${compositors[@]}"; do
 			THETA_JOB_NODES=$(( $i > 8 ? $i : 8 ))
 			export THETA_USE_NODES=$i
 			qsub -n $THETA_JOB_NODES -t 00:30:00 -A Viz_Support \
-				-N ${job_title} \
+				-O ${job_title} \
+				-q debug-cache-quad \
 				--env "MACHINE=$MACHINE" \
 				--env "OSPRAY_THREADS=$OSPRAY_THREADS" \
 				--env "IMAGE_SIZE_X=$IMAGE_SIZE_X" \
