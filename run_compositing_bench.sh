@@ -7,7 +7,6 @@ export I_MPI_PIN_DOMAIN=node
 #export I_MPI_PIN_PROCESSOR_LIST=allcores:map=bunch
 export OSPRAY_SET_AFFINITY=0
 # TODO: PBS support for theta
-export OSPRAY_JOB_NAME=${SLURM_JOB_NAME}-${SLURM_JOBID}
 export OMP_NUM_THREADS=$OSPRAY_THREADS
 
 #source /opt/intel/itac_2018/bin/itacvars.sh
@@ -27,6 +26,13 @@ echo "OSPRAY_THREADS=$OSPRAY_THREADS"
 export BENCH_ARGS="-compositor $BENCH_COMPOSITOR -n $BENCH_ITERS -img $IMAGE_SIZE_X $IMAGE_SIZE_Y"
 
 printenv
+
+if [ -n "$SLURM_JOB_NAME" ]; then
+	export OSPRAY_JOB_NAME=${SLURM_JOB_NAME}-${SLURM_JOBID}
+elif [ -n "$PBS_JOBNAME" ]; then
+	export OSPRAY_JOB_NAME=${PBS_JOBNAME}-${PBS_JOBID}
+fi
+
 
 if [ -n "$TACC" ]; then
 	module restore

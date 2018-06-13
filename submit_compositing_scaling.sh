@@ -3,8 +3,8 @@
 # Usage:
 # ./submit_compositing_scaling <queue>
 
-export IMAGE_SIZE_X=1024
-export IMAGE_SIZE_Y=1024
+export IMAGE_SIZE_X=2048
+export IMAGE_SIZE_Y=2048
 export BENCH_ITERS=200
 export OSPRAY_DP_API_TRACING=0
 
@@ -54,7 +54,7 @@ script_dir=$(dirname $(readlink -f $0))
 
 compositors=(ospray)
 #node_counts=(2 4 8 16 32 64) # 128 256)
-node_counts=(16 32 64)
+node_counts=(8)
 for c in "${compositors[@]}"; do
 	export BENCH_COMPOSITOR=$c
 	for i in "${node_counts[@]}"; do
@@ -85,6 +85,7 @@ for c in "${compositors[@]}"; do
 				--env "BENCH_ITERS=$BENCH_ITERS" \
 				--env "BENCH_COMPOSITOR=$BENCH_COMPOSITOR" \
 				--env "THETA_USE_NODES=$THETA_USE_NODES" \
+				--env "BUILD_DIR=$BUILD_DIR" \
 				${script_dir}/run_compositing_bench.sh				
 		fi
 	done
