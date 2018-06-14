@@ -22,10 +22,6 @@ if [ -n "$WORK_DIR" ]; then
 	cd $WORK_DIR
 fi
 
-echo "OSPRAY_THREADS=$OSPRAY_THREADS"
-export BENCH_ARGS="-compositor $BENCH_COMPOSITOR -n $BENCH_ITERS -img $IMAGE_SIZE_X $IMAGE_SIZE_Y"
-
-printenv
 
 if [ -n "$SLURM_JOB_NAME" ]; then
 	export OSPRAY_JOB_NAME=${SLURM_JOB_NAME}-${SLURM_JOBID}
@@ -33,6 +29,13 @@ elif [ -n "$PBS_JOBNAME" ]; then
 	export OSPRAY_JOB_NAME=${PBS_JOBNAME}-${PBS_JOBID}
 fi
 
+echo "OSPRAY_THREADS=$OSPRAY_THREADS"
+export BENCH_ARGS="-compositor $BENCH_COMPOSITOR \
+	-n $BENCH_ITERS \
+	-img $IMAGE_SIZE_X $IMAGE_SIZE_Y \
+	-o $OSPRAY_JOB_NAME"
+
+printenv
 
 if [ -n "$TACC" ]; then
 	module restore

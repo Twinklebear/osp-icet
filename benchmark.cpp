@@ -49,6 +49,8 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+	std::string output_prefix;
+
 	for (size_t i = 0; i < args.size(); ++i) {
 		if (args[i] == "-compositor") {
 			use_ospray_compositing = args[++i] == "ospray";
@@ -57,6 +59,8 @@ int main(int argc, char **argv) {
 			img_size.y = std::stoi(args[++i]);
 		} else if (args[i] == "-n") {
 			benchmark_iters = std::stoi(args[++i]);
+		} else if (args[i] == "-o") {
+			output_prefix = args[++i];
 		}
 	}
 
@@ -269,7 +273,7 @@ int main(int argc, char **argv) {
 			img = reinterpret_cast<const uint32_t*>(icetImageGetColorcub(icet_img));
 		}
 
-		std::string fname = use_ospray_compositing ? "ospray_" : "ospray_icet_";
+		std::string fname = output_prefix + (use_ospray_compositing ? "ospray_" : "ospray_icet_");
 		fname += std::to_string(grid.x) + "x" + std::to_string(grid.y) + "x"
 			+ std::to_string(grid.z) + "-" + std::to_string(img_size.x)
 			+ "x" + std::to_string(img_size.y) + ".ppm";
