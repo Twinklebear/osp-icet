@@ -47,9 +47,9 @@ elif [ "$MACHINE" == "theta" ]; then
 		node_counts=(2 4 8 16 32 64 128)
 		for i in "${node_counts[@]}"; do
 			subjob_name="bench_${BENCH_COMPOSITOR}_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
-			logfile=${OSPRAY_JOB_NAME}.txt
 
 			export OSPRAY_JOB_NAME=${subjob_name}-${COBALT_JOBID}
+			logfile=${OSPRAY_JOB_NAME}.txt
 
 			export BENCH_ARGS="-compositor $BENCH_COMPOSITOR \
 				-n $BENCH_ITERS \
@@ -61,7 +61,8 @@ elif [ "$MACHINE" == "theta" ]; then
 			aprun -n $i -N 1 -d 64 -cc depth $BUILD_DIR/benchmark $BENCH_ARGS >> $logfile 2>&1
 		done
 	else
-		aprun -n $COBALT_PARTSIZE -N 1 -d 64 -cc depth $BUILD_DIR/benchmark $BENCH_ARGS
+		logfile=${OSPRAY_JOB_NAME}.txt
+		aprun -n $COBALT_PARTSIZE -N 1 -d 64 -cc depth $BUILD_DIR/benchmark $BENCH_ARGS >> $logfile 2>&1
 	fi
 fi
 
