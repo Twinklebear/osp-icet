@@ -201,7 +201,8 @@ int main(int argc, char **argv) {
 	ospFrameBufferClear(framebuffer, OSP_FB_COLOR);
 
 	IceTImage icet_img = icetImageNull();
-	pico_bench::Benchmarker<milliseconds> bencher(benchmark_iters);
+	// Run 5 warm up frames
+	pico_bench::Benchmarker<milliseconds> bencher(benchmark_iters, 5);
 	pico_bench::Statistics<milliseconds> stats({});
 
 	IceTContext icet_context;
