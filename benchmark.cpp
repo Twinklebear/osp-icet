@@ -208,12 +208,8 @@ int main(int argc, char **argv) {
 
 	// Render the image and save it out
 	if (use_ospray_compositing) {
-		int frame = 0;
 		stats = bencher([&](){
-			std::cout << "Starting frame " << frame << std::endl << std::flush;
 			ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
-			std::cout << "Finished frame " << frame << std::endl << std::flush;
-			++frame;
 		});
 	} else {
 		auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
@@ -288,7 +284,6 @@ int main(int argc, char **argv) {
 	if (!use_ospray_compositing) {
 		icetDestroyContext(icet_context);
 	}
-
 	std::cout << std::flush;
 
 	// Clean up all our objects
@@ -299,9 +294,7 @@ int main(int argc, char **argv) {
 	ospRelease(volume);
 	ospShutdown();
 
-	std::cout << "post-ospShutdown\n" << std::flush;
 	MPI_Finalize();
-	std::cout << "finalized\n" << std::flush;
 
 	return 0;
 }
