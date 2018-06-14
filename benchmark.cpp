@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	std::string output_prefix;
+	std::string output_prefix = "bench";
 
 	for (size_t i = 0; i < args.size(); ++i) {
 		if (args[i] == "-compositor") {
