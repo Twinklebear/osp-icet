@@ -6,7 +6,7 @@ export I_MPI_PIN_DOMAIN=node
 #export I_MPI_PIN_PROCESSOR_LIST=allcores:map=scatter
 #export I_MPI_PIN_PROCESSOR_LIST=allcores:map=bunch
 export OSPRAY_SET_AFFINITY=0
-# TODO: PBS support for theta
+# TODO: Cobalt support for theta
 export OMP_NUM_THREADS=$OSPRAY_THREADS
 
 #source /opt/intel/itac_2018/bin/itacvars.sh
@@ -25,8 +25,8 @@ fi
 
 if [ -n "$SLURM_JOB_NAME" ]; then
 	export OSPRAY_JOB_NAME=${SLURM_JOB_NAME}-${SLURM_JOBID}
-elif [ -n "$PBS_JOBNAME" ]; then
-	export OSPRAY_JOB_NAME=${PBS_JOBNAME}-${PBS_JOBID}
+elif [ -n "$THETA_JOBNAME" ]; then
+	export OSPRAY_JOB_NAME=${THETA_JOBNAME}-${COBALT_JOBID}
 fi
 
 echo "OSPRAY_THREADS=$OSPRAY_THREADS"
