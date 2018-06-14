@@ -15,8 +15,6 @@ export OMP_NUM_THREADS=$OSPRAY_THREADS
 #mkdir $VT_LOGFILE_PREFIX
 #TRACE_ARG="-trace"
 
-echo "TRACING: ${OSPRAY_DP_API_TRACING}"
-
 if [ -n "$WORK_DIR" ]; then
 	echo "Changing to $WORK_DIR"
 	cd $WORK_DIR
@@ -43,6 +41,27 @@ if [ -n "$TACC" ]; then
 elif [ "$MACHINE" == "wopr" ]; then
 	mpirun -np $SLURM_JOB_NUM_NODES -ppn 1 $BUILD_DIR/benchmark $BENCH_ARGS
 elif [ "$MACHINE" == "theta" ]; then
-	aprun -n $THETA_USE_NODES -N 1 -d 64 -cc depth $BUILD_DIR/benchmark $BENCH_ARGS
+	# On Theta we run jobs for 2-128 nodes on the same 128 node allocation
+	# since 128 is the min size.
+	if [ "$COBALT_PARTSIZE" == "128" ]; then
+		node_counts=(2 4 8 16 32 64 128)
+		for i in "${node_counts[@]}"; do
+			subjob_name="bench_${BENCH_COMPOSITOR}_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
+			logfile=${OSPRAY_JOB_NAME}.txt
+
+			export OSPRAY_JOB_NAME=${subjob_name}-${COBALT_JOBID}
+
+			export BENCH_ARGS="-compositor $BENCH_COMPOSITOR \
+				-n $BENCH_ITERS \
+				-img $IMAGE_SIZE_X $IMAGE_SIZE_Y \
+				-o $OSPRAY_JOB_NAME"
+
+			echo "Running $subjob_name"
+			printenv > $logfile
+			aprun -n $i -N 1 -d 64 -cc depth $BUILD_DIR/benchmark $BENCH_ARGS >> $logfile 2>&1
+		done
+	else
+		aprun -n $COBALT_PARTSIZE -N 1 -d 64 -cc depth $BUILD_DIR/benchmark $BENCH_ARGS
+	fi
 fi
 
