@@ -6,7 +6,7 @@
 export IMAGE_SIZE_X=2048
 export IMAGE_SIZE_Y=2048
 export BENCH_ITERS=200
-export OSPRAY_DP_API_TRACING=0
+export OSPRAY_DP_API_TRACING=1
 
 export CLUSTER_NAME="`hostname -d`"
 if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
@@ -52,7 +52,7 @@ fi
 
 script_dir=$(dirname $(readlink -f $0))
 
-compositors=(ospray)
+compositors=(ospray icet)
 #node_counts=(2 4 8 16 32 64) # 128 256)
 node_counts=(128)
 for c in "${compositors[@]}"; do
@@ -78,7 +78,6 @@ for c in "${compositors[@]}"; do
 			# we'd really want to run all the 2-128 node benchmarks
 			# with a single job
 			THETA_JOB_NODES=$i
-			export THETA_USE_NODES=$i
 			qsub -n $THETA_JOB_NODES -t 00:30:00 -A Viz_Support \
 				-O ${job_title} \
 				--env "MACHINE=$MACHINE" \
@@ -87,9 +86,9 @@ for c in "${compositors[@]}"; do
 				--env "IMAGE_SIZE_Y=$IMAGE_SIZE_Y" \
 				--env "BENCH_ITERS=$BENCH_ITERS" \
 				--env "BENCH_COMPOSITOR=$BENCH_COMPOSITOR" \
-				--env "THETA_USE_NODES=$THETA_USE_NODES" \
 				--env "BUILD_DIR=$BUILD_DIR" \
 				--env "THETA_JOBNAME=$job_title" \
+				--env "OSPRAY_DP_API_TRACING=$OSPRAY_DP_API_TRACING" \
 				${script_dir}/run_compositing_bench.sh				
 		fi
 	done
