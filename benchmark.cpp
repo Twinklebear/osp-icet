@@ -299,7 +299,9 @@ int main(int argc, char **argv) {
 	ospRelease(volume);
 	ospShutdown();
 
+	std::cout << "post-ospShutdown\n" << std::flush;
 	MPI_Finalize();
+	std::cout << "finalized\n" << std::flush;
 
 	return 0;
 }
