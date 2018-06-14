@@ -273,7 +273,7 @@ int main(int argc, char **argv) {
 			img = reinterpret_cast<const uint32_t*>(icetImageGetColorcub(icet_img));
 		}
 
-		std::string fname = output_prefix + (use_ospray_compositing ? "ospray_" : "ospray_icet_");
+		std::string fname = output_prefix + (use_ospray_compositing ? "_ospray_" : "_ospray_icet_");
 		fname += std::to_string(grid.x) + "x" + std::to_string(grid.y) + "x"
 			+ std::to_string(grid.z) + "-" + std::to_string(img_size.x)
 			+ "x" + std::to_string(img_size.y) + ".ppm";
