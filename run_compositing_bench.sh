@@ -29,12 +29,18 @@ printenv
 compositors=(ospray icet)
 for c in "${compositors[@]}"; do
 	export OSPRAY_JOB_NAME="bench_${c}_${NPROCS}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
+	if [ -n "$JOB_QUEUE" ]; then
+		export OSPRAY_JOB_NAME="${OSPRAY_JOB_NAME}-$JOB_QUEUE"
+	fi
 
 	export BENCH_ARGS="-compositor $BENCH_COMPOSITOR \
 		-n $BENCH_ITERS \
 		-img $IMAGE_SIZE_X $IMAGE_SIZE_Y \
 		-o $OSPRAY_JOB_NAME"
 	logfile=${OSPRAY_JOB_NAME}.txt
+
+	printenv
+	echo "logging to ${logfile}"
 
 	if [ -n "$TACC" ]; then
 		module restore
