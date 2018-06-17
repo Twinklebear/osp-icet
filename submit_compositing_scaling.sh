@@ -14,6 +14,10 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 	export TACC=true
 	#export BUILD_DIR=$WORK/osp-icet/build-trace
 	export BUILD_DIR=$WORK/osp-icet/build
+	# Intel MPI progress thread - This gets rid of the performance
+	# hiccups on KNL and makes our performance more stable
+	#export I_MPI_ASYNC_PROGRESS=1
+	#export I_MPI_ASYNC_PROGRESS_PIN=1
 	if [ -z "$1" ]; then
 		echo "A queue is required for stampede2!"
 		exit 1
@@ -24,10 +28,6 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 		echo "Assuming $1 is KNL queue"
 		export OSPRAY_THREADS=67
 		export JOB_QUEUE=$1
-		# Intel MPI progress thread - This gets rid of the performance
-		# hiccups on KNL and makes our performance more stable
-		#export I_MPI_ASYNC_PROGRESS=1
-		#export I_MPI_ASYNC_PROGRESS_PIN=1
 	fi
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
 	export OSPRAY_THREADS=20
@@ -46,6 +46,9 @@ elif [ "`hostname`" == "wopr.sci.utah.edu" ]; then
 elif [ "`hostname | head -c 5`" == "theta" ]; then
 	export OSPRAY_THREADS=63
 	export MACHINE=theta
+	#export MPICH_NEMESIS_ASYNC_PROGRESS=MC
+	#export MPICH_GNI_ASYNC_PROGRESS_TIMEOUT=0
+	export MPICH_MAX_THREAD_SAFETY=multiple
 fi
 
 if [ -z "$BUILD_DIR" ]; then
