@@ -6,7 +6,7 @@
 export IMAGE_SIZE_X=2048
 export IMAGE_SIZE_Y=2048
 export BENCH_ITERS=200
-export OSPRAY_DP_API_TRACING=1
+export OSPRAY_DP_API_TRACING=0
 
 export CLUSTER_NAME="`hostname -d`"
 if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
@@ -75,7 +75,7 @@ for i in "${node_counts[@]}"; do
 		# we'd really want to run all the 2-128 node benchmarks
 		# with a single job
 		THETA_JOB_NODES=$i
-		qsub -n $THETA_JOB_NODES -t 00:30:00 -A Viz_Support \
+		qsub -n $THETA_JOB_NODES -t 00:30:00 -A UINTAH_aesp \
 			-O ${job_title} \
 			--env "MACHINE=$MACHINE" \
 			--env "OSPRAY_THREADS=$OSPRAY_THREADS" \
