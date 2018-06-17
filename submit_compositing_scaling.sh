@@ -82,7 +82,6 @@ for i in "${node_counts[@]}"; do
 			--env "IMAGE_SIZE_X=$IMAGE_SIZE_X" \
 			--env "IMAGE_SIZE_Y=$IMAGE_SIZE_Y" \
 			--env "BENCH_ITERS=$BENCH_ITERS" \
-			--env "BENCH_COMPOSITOR=$BENCH_COMPOSITOR" \
 			--env "BUILD_DIR=$BUILD_DIR" \
 			--env "THETA_JOBNAME=$job_title" \
 			--env "OSPRAY_DP_API_TRACING=$OSPRAY_DP_API_TRACING" \

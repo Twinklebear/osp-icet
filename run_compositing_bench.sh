@@ -24,8 +24,6 @@ fi
 JOBID="${SLURM_JOBID}${COBALT_JOBID}"
 NPROCS="${SLURM_NNODES}${COBALT_PARTSIZE}"
 
-printenv
-
 compositors=(ospray icet)
 for c in "${compositors[@]}"; do
 	export OSPRAY_JOB_NAME="bench_${c}_${NPROCS}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
@@ -33,14 +31,13 @@ for c in "${compositors[@]}"; do
 		export OSPRAY_JOB_NAME="${OSPRAY_JOB_NAME}-$JOB_QUEUE"
 	fi
 
-	export BENCH_ARGS="-compositor $BENCH_COMPOSITOR \
+	export BENCH_ARGS="-compositor $c \
 		-n $BENCH_ITERS \
 		-img $IMAGE_SIZE_X $IMAGE_SIZE_Y \
 		-o $OSPRAY_JOB_NAME"
 	logfile=${OSPRAY_JOB_NAME}.txt
 
-	printenv
-	echo "logging to ${logfile}"
+	printenv > $logfile
 
 	if [ -n "$TACC" ]; then
 		module restore
@@ -56,7 +53,7 @@ for c in "${compositors[@]}"; do
 				export OSPRAY_JOB_NAME="bench_${c}_${i}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
 				logfile=${OSPRAY_JOB_NAME}.txt
 
-				export BENCH_ARGS="-compositor $BENCH_COMPOSITOR \
+				export BENCH_ARGS="-compositor $c \
 					-n $BENCH_ITERS \
 					-img $IMAGE_SIZE_X $IMAGE_SIZE_Y \
 					-o $OSPRAY_JOB_NAME"
