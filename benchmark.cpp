@@ -304,6 +304,7 @@ void ospray_draw_callback(const double*, const double*, const float*, const int*
 	ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
 	auto endRender = high_resolution_clock::now();
 
+#if 0
 	const int renderTime = duration_cast<milliseconds>(endRender - startRender).count();
 	int maxTime = 0, minTime = 0;
 	MPI_Reduce(&renderTime, &maxTime, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -312,6 +313,7 @@ void ospray_draw_callback(const double*, const double*, const float*, const int*
 		std::cout << "IceT Max OSPRay render time: " << maxTime
 			<< "ms\nIceT Min OSPRay render time: " << minTime << "ms\n";
 	}
+#endif
 
 	const uint8_t *img = static_cast<const uint8_t*>(ospMapFrameBuffer(framebuffer, OSP_FB_COLOR));
 	uint8_t *output = icetImageGetColorub(result);
