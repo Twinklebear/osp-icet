@@ -52,45 +52,41 @@ fi
 
 script_dir=$(dirname $(readlink -f $0))
 
-compositors=(ospray icet)
 #node_counts=(2 4 8 16 32 64) # 128 256)
 node_counts=(128)
-for c in "${compositors[@]}"; do
-	export BENCH_COMPOSITOR=$c
-	for i in "${node_counts[@]}"; do
-		job_title="bench_${c}_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
+for i in "${node_counts[@]}"; do
+	job_title="bench_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
 
-		if [ -n "$TACC" ]; then
-			export TACC_ARGS="-A OSPRay -p $JOB_QUEUE"
-			job_title="${job_title}-$JOB_QUEUE"
-		fi
-		if [ -n "`command -v sbatch`" ]; then
-			sbatch -n $i -N $i --ntasks-per-node=1 -t 00:05:00 \
-				$TACC_ARGS \
-				-S $OSPRAY_THREADS \
-				-J $job_title -o ${job_title}-%j.txt \
-				${script_dir}/run_compositing_bench.sh
-		elif [ -n "`command -v qsub`" ]; then
-			# A lot of crap for theta and qsub because cobalt is
-			# dumb to pick up my environment
-			#THETA_JOB_NODES=$(( $i > 8 ? $i : 8 ))
-			# TODO: Theta increased to 128 node min, so instead
-			# we'd really want to run all the 2-128 node benchmarks
-			# with a single job
-			THETA_JOB_NODES=$i
-			qsub -n $THETA_JOB_NODES -t 00:30:00 -A Viz_Support \
-				-O ${job_title} \
-				--env "MACHINE=$MACHINE" \
-				--env "OSPRAY_THREADS=$OSPRAY_THREADS" \
-				--env "IMAGE_SIZE_X=$IMAGE_SIZE_X" \
-				--env "IMAGE_SIZE_Y=$IMAGE_SIZE_Y" \
-				--env "BENCH_ITERS=$BENCH_ITERS" \
-				--env "BENCH_COMPOSITOR=$BENCH_COMPOSITOR" \
-				--env "BUILD_DIR=$BUILD_DIR" \
-				--env "THETA_JOBNAME=$job_title" \
-				--env "OSPRAY_DP_API_TRACING=$OSPRAY_DP_API_TRACING" \
-				${script_dir}/run_compositing_bench.sh				
-		fi
-	done
+	if [ -n "$TACC" ]; then
+		export TACC_ARGS="-A OSPRay -p $JOB_QUEUE"
+		job_title="${job_title}-$JOB_QUEUE"
+	fi
+	if [ -n "`command -v sbatch`" ]; then
+		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:05:00 \
+			$TACC_ARGS \
+			-S $OSPRAY_THREADS \
+			-J $job_title -o ${job_title}-%j.txt \
+			${script_dir}/run_compositing_bench.sh
+	elif [ -n "`command -v qsub`" ]; then
+		# A lot of crap for theta and qsub because cobalt is
+		# dumb to pick up my environment
+		#THETA_JOB_NODES=$(( $i > 8 ? $i : 8 ))
+		# TODO: Theta increased to 128 node min, so instead
+		# we'd really want to run all the 2-128 node benchmarks
+		# with a single job
+		THETA_JOB_NODES=$i
+		qsub -n $THETA_JOB_NODES -t 00:30:00 -A Viz_Support \
+			-O ${job_title} \
+			--env "MACHINE=$MACHINE" \
+			--env "OSPRAY_THREADS=$OSPRAY_THREADS" \
+			--env "IMAGE_SIZE_X=$IMAGE_SIZE_X" \
+			--env "IMAGE_SIZE_Y=$IMAGE_SIZE_Y" \
+			--env "BENCH_ITERS=$BENCH_ITERS" \
+			--env "BENCH_COMPOSITOR=$BENCH_COMPOSITOR" \
+			--env "BUILD_DIR=$BUILD_DIR" \
+			--env "THETA_JOBNAME=$job_title" \
+			--env "OSPRAY_DP_API_TRACING=$OSPRAY_DP_API_TRACING" \
+			${script_dir}/run_compositing_bench.sh				
+	fi
 done
 
