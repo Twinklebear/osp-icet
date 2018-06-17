@@ -142,11 +142,11 @@ for res,series in scaling_runs.items():
         plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2)
 
 ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
-plt.title("Scaling Runs on  ({} time)".format(plot_var))
+plt.title("Scaling Runs on ?Fill This? SKX ({} time)".format(plot_var))
 plt.ylabel("Rendering + Compositing (ms)")
 plt.xlabel("Nodes")
 plt.legend(loc=0)
-#plt.savefig("scaling-ls5-{}.png".format(plot_var), dpi=150)
+#plt.savefig("scaling-stampede2-skx-{}.png".format(plot_var), dpi=150)
 plt.show()
 #plt.savefig("scaling-stampede2-{}.pdf".format(plot_var))
 
