@@ -14,13 +14,16 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 	export TACC=true
 	#export BUILD_DIR=$WORK/osp-icet/build-trace
 	export BUILD_DIR=$WORK/osp-icet/build
-	if [ "$1" == "skx-normal" ]; then
+	if [ -z "$1" ]; then
+		echo "A queue is required for stampede2!"
+		exit 1
+	elif [ "$1" == "skx-normal" ]; then
 		export OSPRAY_THREADS=47
 		export JOB_QUEUE=skx-normal
 	else
+		echo "Assuming $1 is KNL queue"
 		export OSPRAY_THREADS=67
-		export JOB_QUEUE=normal
-		#export JOB_QUEUE=development
+		export JOB_QUEUE=$1
 		# Intel MPI progress thread - This gets rid of the performance
 		# hiccups on KNL and makes our performance more stable
 		#export I_MPI_ASYNC_PROGRESS=1
@@ -52,8 +55,7 @@ fi
 
 script_dir=$(dirname $(readlink -f $0))
 
-#node_counts=(2 4 8 16 32 64) # 128 256)
-node_counts=(128)
+node_counts=(2 4 8 16 32 64 128 256)
 for i in "${node_counts[@]}"; do
 	job_title="bench_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
 
