@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ -n "$TACC" ]; then
+	module restore
+fi
+
 export I_MPI_PIN_RESPECT_CPUSET=0
 export I_MPI_PIN_RESPECT_HCA=0
 export I_MPI_PIN_DOMAIN=node
@@ -40,7 +44,6 @@ for c in "${compositors[@]}"; do
 	printenv > $logfile
 
 	if [ -n "$TACC" ]; then
-		module restore
 		ibrun $TRACE_ARG $BUILD_DIR/benchmark $BENCH_ARGS >> $logfile 2>&1
 	elif [ "$MACHINE" == "wopr" ]; then
 		mpirun -np $SLURM_JOB_NUM_NODES -ppn 1 $BUILD_DIR/benchmark $BENCH_ARGS >> $logfile 2>&1
