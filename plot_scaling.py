@@ -89,8 +89,6 @@ for f in args["<file>"]:
     if m and not parse_rank_file.search(f):
         print("Parsing run log {}".format(f))
         resolution = "{}x{}".format(m.group(3), m.group(4))
-        if int(m.group(2)) > 128:
-            continue
 
         run = BenchmarkRun(m.group(1), int(m.group(2)))
         if not resolution in scaling_runs:
