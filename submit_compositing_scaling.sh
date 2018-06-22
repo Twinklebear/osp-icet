@@ -16,17 +16,17 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 	export BUILD_DIR=$WORK/osp-icet/build
 	# Intel MPI progress thread - This gets rid of the performance
 	# hiccups on KNL and makes our performance more stable
-	#export I_MPI_ASYNC_PROGRESS=1
+	export I_MPI_ASYNC_PROGRESS=1
 	#export I_MPI_ASYNC_PROGRESS_PIN=1
 	if [ -z "$1" ]; then
 		echo "A queue is required for stampede2!"
 		exit 1
 	elif [ "$1" == "skx-normal" ]; then
-		export OSPRAY_THREADS=47
+		export OSPRAY_THREADS=48
 		export JOB_QUEUE=skx-normal
 	else
 		echo "Assuming $1 is KNL queue"
-		export OSPRAY_THREADS=67
+		export OSPRAY_THREADS=68
 		export JOB_QUEUE=$1
 	fi
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
@@ -58,7 +58,8 @@ fi
 
 script_dir=$(dirname $(readlink -f $0))
 
-node_counts=(2) # 4 8) # 16 32 64 128)
+node_counts=(2 4 8 16 32 64 128)
+#node_counts=(128)
 for i in "${node_counts[@]}"; do
 	job_title="bench_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
 
@@ -67,7 +68,7 @@ for i in "${node_counts[@]}"; do
 		job_title="${job_title}-$JOB_QUEUE"
 	fi
 	if [ -n "`command -v sbatch`" ]; then
-		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:05:00 \
+		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:10:00 \
 			$TACC_ARGS \
 			--export=all \
 			-J $job_title -o ${job_title}-%j.txt \
