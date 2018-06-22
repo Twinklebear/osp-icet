@@ -4,6 +4,7 @@ import os
 import sys
 import re
 import matplotlib
+from docopt import docopt
 
 import matplotlib.pyplot as plt
 
@@ -59,11 +60,18 @@ class ScalingRun:
         elif run.compositor == "ospray":
             self.ospray.append(run)
 
-if len(sys.argv) < 3:
-    print("Usage: {} <plot var> <files>".format(sys.argv[0]))
-    sys.exit(1)
+doc = """Plot Scaling
 
-parse_fname = re.compile("bench_(\w+)_(\d+)n_(\d+)x(\d+).*\.txt")
+Usage:
+    plot_scaling.py <var> <machine> <file>... [-o OUTPUT]
+
+Options:
+    -o OUTPUT    save the plot to an output file
+"""
+args = docopt(doc)
+
+parse_fname = re.compile("bench_(\w+)_(\d+)n_(\d+)x(\d+)-(?:.*-)?\d+.*\.txt")
+parse_rank_file = re.compile("rank\d+")
 parse_max = re.compile("max: (\d+)")
 parse_min = re.compile("min: (\d+)")
 parse_median = re.compile("median: (\d+)")
@@ -71,14 +79,19 @@ parse_median_abs_dev = re.compile("median abs dev: (\d+)")
 parse_mean = re.compile("mean: (\d+)")
 parse_std_dev = re.compile("std dev: (\d+)")
 
-plot_var = sys.argv[1]
+plot_var = args["<var>"]
+machine = args["<machine>"]
 scaling_runs = {}
 
-for f in sys.argv[2:]:
+for f in args["<file>"]:
     m = parse_fname.search(f)
-    if m:
+    # We have to be careful here because regex sucks
+    if m and not parse_rank_file.search(f):
         print("Parsing run log {}".format(f))
         resolution = "{}x{}".format(m.group(3), m.group(4))
+        if int(m.group(2)) > 128:
+            continue
+
         run = BenchmarkRun(m.group(1), int(m.group(2)))
         if not resolution in scaling_runs:
             scaling_runs[resolution] = ScalingRun(resolution)
@@ -142,11 +155,12 @@ for res,series in scaling_runs.items():
         plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2)
 
 ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
-plt.title("Scaling Runs on ?Fill This? SKX ({} time)".format(plot_var))
+plt.title("Scaling Runs on {} ({} time)".format(machine, plot_var))
 plt.ylabel("Rendering + Compositing (ms)")
 plt.xlabel("Nodes")
 plt.legend(loc=0)
-#plt.savefig("scaling-stampede2-skx-{}.png".format(plot_var), dpi=150)
-plt.show()
-#plt.savefig("scaling-stampede2-{}.pdf".format(plot_var))
+if args["-o"]:
+    plt.savefig(args["-o"])
+else:
+    plt.show()
 
