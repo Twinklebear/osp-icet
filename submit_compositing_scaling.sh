@@ -58,7 +58,7 @@ fi
 
 script_dir=$(dirname $(readlink -f $0))
 
-node_counts=(2) # 4 8 16 32 64 128)
+node_counts=(2 4 8 16 32 64 128)
 #node_counts=(128)
 for i in "${node_counts[@]}"; do
 	job_title="bench_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
@@ -68,7 +68,7 @@ for i in "${node_counts[@]}"; do
 		job_title="${job_title}-$JOB_QUEUE"
 	fi
 	if [ -n "`command -v sbatch`" ]; then
-		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:15:00 \
+		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:10:00 \
 			$TACC_ARGS \
 			--export=all \
 			-J $job_title -o ${job_title}-%j.txt \
