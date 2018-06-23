@@ -4,7 +4,7 @@ import os
 import sys
 import re
 import matplotlib
-import numpy
+import numpy as np
 import scipy
 from docopt import docopt
 
@@ -15,28 +15,30 @@ class Statistic:
         self.data = []
 
     def attrib(self, atr):
+        if len(self.data) == 0:
+            return np.nan
         if atr == "max":
             return max(self.data)
         if atr == "min":
             return min(self.data)
         if atr == "median":
-            return numpy.median(self.data)
+            return np.median(self.data)
         if atr == "mean":
-            return numpy.mean(self.data)
+            return np.mean(self.data)
         if atr == "std_dev":
-            return numpy.std(self.data)
+            return np.std(self.data)
 
 
 class BenchmarkRun:
     def __init__(self, compositor, node_count):
         self.compositor = compositor
         self.node_count = node_count
-        self.max = 0
-        self.min = 0
-        self.median = 0
-        self.median_abs_dev = 0
-        self.mean = 0
-        self.std_dev = 0
+        self.max = np.nan
+        self.min = np.nan
+        self.median = np.nan
+        self.median_abs_dev = np.nan
+        self.mean = np.nan
+        self.std_dev = np.nan
         self.compositing_overhead = Statistic()
         self.local_max_render_time = Statistic()
 
@@ -80,6 +82,16 @@ class ScalingRun:
             self.icet.append(run)
         elif run.compositor == "ospray":
             self.ospray.append(run)
+
+def filter_nans(y):
+    return list(filter(lambda v: np.isfinite(v), y))
+
+def filter_xy_nans(x, y):
+    for i in range(0, len(y)):
+        if np.isnan(y[i]):
+            x[i] = np.nan
+
+    return (filter_nans(x), filter_nans(y))
 
 doc = """Plot Scaling
 
@@ -178,26 +190,31 @@ for res,series in scaling_runs.items():
     series.ospray.sort(key=lambda r: r.node_count)
 
     x = list(map(lambda r: r.node_count, series.icet))
-    #y = list(map(lambda r: r.attrib(plot_var), series.icet))
-    y_overhead = list(map(lambda r: r.attrib(plot_var) - r.local_max_render_time.attrib(plot_var), series.icet))
-    y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.icet))
+    y = list(map(lambda r: r.attrib(plot_var), series.icet))
+
+    #y_overhead = list(map(lambda r: r.attrib(plot_var) - r.local_max_render_time.attrib(plot_var), series.icet))
+    #y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.icet))
+
+    (x, y) = filter_xy_nans(x, y)
     if args["--std-dev"]:
         yerr = list(map(lambda r: r.std_dev, series.icet))
         plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=yerr)
     else:
         plt.plot(x, y, "o-", label="IceT {}".format(res), linewidth=2)
-        plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2)
+        #plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2)
 
     x = list(map(lambda r: r.node_count, series.ospray))
-    #y = list(map(lambda r: r.attrib(plot_var), series.ospray))
-    y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
-    y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
+    y = list(map(lambda r: r.attrib(plot_var), series.ospray))
+    #y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
+    #y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
+    (x, y) = filter_xy_nans(x, y)
+
     if args["--std-dev"]:
         yerr = list(map(lambda r: r.std_dev, series.ospray))
         plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=yerr)
     else:
         plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2)
-        plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2)
+        #plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2)
 
 ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
 plt.title("Scaling Runs on {} ({} time)".format(machine, plot_var))
