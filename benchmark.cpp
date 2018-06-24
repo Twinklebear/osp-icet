@@ -221,13 +221,6 @@ int main(int argc, char **argv) {
 			}
 			++frame;
 		});
-		if (rank == 0) {
-			std::cout << "stats = { ";
-			for (size_t i = 0; i < stats.size(); ++i) {
-				std::cout << stats[i].count() << ", ";
-			}
-			std::cout << "}\n";
-		}
 	} else {
 		auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
 		icet_context = icetCreateContext(icet_comm);
