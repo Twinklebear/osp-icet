@@ -207,11 +207,27 @@ int main(int argc, char **argv) {
 
 	IceTContext icet_context;
 
+	size_t frame = 0;
 	// Render the image and save it out
 	if (use_ospray_compositing) {
+		using namespace std::chrono;
 		stats = bencher([&](){
+			auto start = high_resolution_clock::now();
 			ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
+			auto end = high_resolution_clock::now();
+			if (rank == 0) {
+				std::cout << "Frame: " << frame << " took: "
+					<< duration_cast<milliseconds>(end - start).count() << "ms\n";
+			}
+			++frame;
 		});
+		if (rank == 0) {
+			std::cout << "stats = { ";
+			for (size_t i = 0; i < stats.size(); ++i) {
+				std::cout << stats[i].count() << ", ";
+			}
+			std::cout << "}\n";
+		}
 	} else {
 		auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
 		icet_context = icetCreateContext(icet_comm);
