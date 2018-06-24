@@ -152,11 +152,12 @@ public:
 	stats_type operator()(Fn _fn) const {
 		BenchWrapper<Fn> fn{_fn};
 		// Do the warm up runs
-    for (size_t i = 0; i < WARM_UPS; ++i) {
-      fn();
-    }
+		for (size_t i = 0; i < WARM_UPS; ++i) {
+			fn();
+		}
 		T elapsed{0};
 		std::vector<T> samples;
+		samples.reserve(MAX_ITER);
 		for (size_t i = 0; i < MAX_ITER && (MAX_RUNTIME.count() == 0 || elapsed < MAX_RUNTIME);
 				++i, elapsed += samples.back())
 		{
@@ -176,11 +177,12 @@ public:
 		stats_type>::type
 	operator()(Fn fn) const {
 		// Do a the warm up runs
-    for (size_t i = 0; i < WARM_UPS; ++i) {
-      fn();
-    }
+		for (size_t i = 0; i < WARM_UPS; ++i) {
+			fn();
+		}
 		T elapsed{0};
 		std::vector<T> samples;
+		samples.reserve(MAX_ITER);
 		for (size_t i = 0; i < MAX_ITER && (MAX_RUNTIME.count() == 0 || elapsed < MAX_RUNTIME);
 				++i, elapsed += samples.back())
 		{

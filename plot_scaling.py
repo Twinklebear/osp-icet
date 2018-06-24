@@ -6,6 +6,7 @@ import re
 import matplotlib
 import numpy as np
 import scipy
+import itertools
 from docopt import docopt
 
 import matplotlib.pyplot as plt
@@ -13,6 +14,9 @@ import matplotlib.pyplot as plt
 class Statistic:
     def __init__(self):
         self.data = []
+
+    def append(self, d):
+        self.data.append(d)
 
     def attrib(self, atr):
         if len(self.data) == 0:
@@ -28,6 +32,16 @@ class Statistic:
         if atr == "std_dev":
             return np.std(self.data)
 
+class PerRankStats:
+    def __init__(self):
+        self.rendering = Statistic()
+        self.compositing = Statistic()
+        self.total = Statistic()
+        self.gather = Statistic()
+        self.waiting = Statistic()
+        self.cpu_per = Statistic()
+        self.vmsize = Statistic()
+        self.vmrss = Statistic()
 
 class BenchmarkRun:
     def __init__(self, compositor, node_count):
@@ -41,6 +55,8 @@ class BenchmarkRun:
         self.std_dev = np.nan
         self.compositing_overhead = Statistic()
         self.local_max_render_time = Statistic()
+        self.frame_times = Statistic()
+        self.rank_data = {}
 
     def attrib(self, attrib):
         if attrib == "max":
@@ -71,6 +87,10 @@ class BenchmarkRun:
                 self.median, self.median_abs_dev,
                 self.mean, self.std_dev)
 
+# How is this not a built-in function!?
+def first_true(iterable, default=False, pred=None):
+    return next(filter(pred, iterable), default)
+
 class ScalingRun:
     def __init__(self, res):
         self.resolution = res
@@ -82,6 +102,14 @@ class ScalingRun:
             self.icet.append(run)
         elif run.compositor == "ospray":
             self.ospray.append(run)
+
+    def get_run(self, compositor, nodes):
+        if compositor == "ospray":
+            return first_true(self.ospray, None,
+                    lambda x: x.node_count == nodes)
+        elif compositor == "icet":
+            return first_true(self.icet, None,
+                    lambda x: x.node_count == nodes)
 
 def filter_nans(y):
     return list(filter(lambda v: np.isfinite(v), y))
@@ -102,11 +130,12 @@ Options:
     -o OUTPUT     save the plot to an output file
     --min <value> min node count threshold to plot
     --std-dev     plot std. dev as error bars
+    --ranks       plot rank data histogram
 """
 args = docopt(doc)
 
 parse_fname = re.compile("bench_(\w+)_(\d+)n_(\d+)x(\d+)-(?:.*-)?\d+.*\.txt")
-parse_rank_file = re.compile("rank\d+")
+parse_rank_file = re.compile("rank(\d+)")
 parse_max = re.compile("max: (\d+)")
 parse_min = re.compile("min: (\d+)")
 parse_median = re.compile("median: (\d+)")
@@ -115,6 +144,7 @@ parse_mean = re.compile("mean: (\d+)")
 parse_std_dev = re.compile("std dev: (\d+)")
 parse_compositing_overhead = re.compile("Compositing overhead: (\d+)")
 parse_local_max_render_time = re.compile("Max render time: (\d+)")
+parse_frame_time = re.compile("Frame: \d+ took: (\d+)")
 
 plot_var = args["<var>"]
 machine = args["<machine>"]
@@ -123,6 +153,66 @@ if args["--min"]:
     min_node_count = int(args["--min"])
 
 scaling_runs = {}
+
+def plot_scaling_set():
+    ax = plt.subplot(111)
+    ax.set_xscale("log", basex=2, nonposx="clip")
+    #ax.set_yscale("log", basey=2, nonposy="clip")
+
+    for res,series in scaling_runs.items():
+        x = list(map(lambda r: r.node_count, series.icet))
+        y = list(map(lambda r: r.attrib(plot_var), series.icet))
+
+        y_overhead = list(map(lambda r: r.attrib(plot_var) - r.local_max_render_time.attrib(plot_var),
+            series.icet))
+        y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.icet))
+
+        (x, y) = filter_xy_nans(x, y)
+        y_overhead = filter_nans(y_overhead)
+
+        if args["--std-dev"]:
+            yerr = list(map(lambda r: r.std_dev, series.icet))
+            plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=yerr)
+        else:
+            plt.plot(x, y, "o-", label="IceT {}".format(res), linewidth=2)
+            plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2)
+
+        x = list(map(lambda r: r.node_count, series.ospray))
+        y = list(map(lambda r: r.attrib(plot_var), series.ospray))
+        y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
+        y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
+        (x, y) = filter_xy_nans(x, y)
+        y_overhead = filter_nans(y_overhead)
+        print(y_overhead)
+
+        if args["--std-dev"]:
+            yerr = list(map(lambda r: r.std_dev, series.ospray))
+            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=yerr)
+        else:
+            plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2)
+            plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2)
+
+    ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
+    plt.title("Scaling Runs on {} ({} time)".format(machine, plot_var))
+    plt.ylabel("Time (ms)")
+    plt.xlabel("Nodes")
+    plt.legend(loc=0)
+
+def plot_rank_histogram():
+    for res,series in scaling_runs.items():
+        for br in series.ospray:
+            for n,rank in br.rank_data.items():
+                y = rank.total.data
+                plt.plot(list(range(0, len(y))), y, "-", label="Rank {}".format(n),
+                        linewidth=2)
+
+            plt.plot(list(range(0, len(br.frame_times.data))), br.frame_times.data,
+                    "--", label="Overall".format(n), linewidth=2)
+
+    plt.title("Per-Rank data on {}".format(machine, plot_var))
+    plt.ylabel("Total (ms)")
+    plt.xlabel("Frame")
+    plt.legend(loc=0)
 
 for f in args["<file>"]:
     m = parse_fname.search(f)
@@ -145,82 +235,114 @@ for f in args["<file>"]:
                 if m:
                     run.max = int(m.group(1))
                     continue
-
                 m = parse_min.search(l)
                 if m:
                     run.min = int(m.group(1))
                     continue
-
                 m = parse_median.search(l)
                 if m:
                     run.median = int(m.group(1))
                     continue
-
                 m = parse_median_abs_dev.search(l)
                 if m:
                     run.median_abs_dev = int(m.group(1))
                     continue
-
                 m = parse_mean.search(l)
                 if m:
                     run.mean = int(m.group(1))
                     continue
-
                 m = parse_std_dev.search(l)
                 if m:
                     run.std_dev = int(m.group(1))
                     continue
-
                 m = parse_compositing_overhead.search(l)
                 if m:
-                    run.compositing_overhead.data.append(int(m.group(1)))
-
+                    run.compositing_overhead.append(int(m.group(1)))
+                    continue
                 m = parse_local_max_render_time.search(l)
                 if m:
-                    run.local_max_render_time.data.append(int(m.group(1)))
+                    run.local_max_render_time.append(int(m.group(1)))
+                    continue
+                m = parse_frame_time.search(l)
+                if m:
+                    run.frame_times.append(int(m.group(1)))
 
         scaling_runs[resolution].add_run(run)
 
-ax = plt.subplot(111)
-ax.set_xscale("log", basex=2, nonposx="clip")
-#ax.set_yscale("log", basey=2, nonposy="clip")
+parse_rank_rendering = re.compile("Rendering: (\d+)")
+parse_rank_compositing = re.compile("Compositing: (\d+)")
+parse_rank_total = re.compile("Total: (\d+)")
+parse_rank_gather = re.compile("Gather time: (\d+(?:\.\d+)?)")
+parse_rank_waiting = re.compile("Waiting for frame: (\d+(?:\.\d+)?)")
+parse_rank_cpu_per = re.compile("CPU: (\d+(?:\.\d+)?)")
+parse_rank_vmsize = re.compile("VmSize:[^\d]+(\d+)")
+parse_rank_vmrss = re.compile("VmRSS:[^\d]+(\d+)")
+
+# Now go through and parse all the per-rank data
+for f in args["<file>"]:
+    m = parse_fname.search(f)
+    m2 = parse_rank_file.search(f)
+    # We have to be careful here because regex sucks
+    if m and m2:
+        print("Parsing rank log {}".format(f))
+        compositor = m.group(1)
+        resolution = "{}x{}".format(m.group(3), m.group(4))
+        node_count = int(m.group(2))
+        rank_num = int(m2.group(1))
+
+        if node_count < min_node_count:
+            continue
+
+        run = scaling_runs[resolution].get_run(compositor, node_count)
+        if not run:
+            print("Failed to find base run for rank log file {}!?".format(f))
+
+        rank = PerRankStats()
+        run.rank_data[rank_num] = rank
+
+        with open(f, 'r') as content:
+            for l in content:
+                m = parse_rank_rendering.search(l)
+                if m:
+                    rank.rendering.append(int(m.group(1)))
+                    continue
+                m = parse_rank_compositing.search(l)
+                if m:
+                    rank.compositing.append(int(m.group(1)))
+                    continue
+                m = parse_rank_total.search(l)
+                if m:
+                    rank.total.append(int(m.group(1)))
+                    continue
+                m = parse_rank_gather.search(l)
+                if m:
+                    rank.gather.append(float(m.group(1)))
+                    continue
+                m = parse_rank_waiting.search(l)
+                if m:
+                    rank.waiting.append(float(m.group(1)))
+                    continue
+                m = parse_rank_cpu_per.search(l)
+                if m:
+                    rank.cpu_per.append(float(m.group(1)))
+                    continue
+                m = parse_rank_vmsize.search(l)
+                if m:
+                    rank.vmsize.append(int(m.group(1)))
+                    continue
+                m = parse_rank_vmrss.search(l)
+                if m:
+                    rank.vmrss.append(int(m.group(1)))
 
 for res,series in scaling_runs.items():
     series.icet.sort(key=lambda r: r.node_count)
     series.ospray.sort(key=lambda r: r.node_count)
 
-    x = list(map(lambda r: r.node_count, series.icet))
-    y = list(map(lambda r: r.attrib(plot_var), series.icet))
+if args["--ranks"]:
+    plot_rank_histogram()
+else:
+    plot_scaling_set()
 
-    #y_overhead = list(map(lambda r: r.attrib(plot_var) - r.local_max_render_time.attrib(plot_var), series.icet))
-    #y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.icet))
-
-    (x, y) = filter_xy_nans(x, y)
-    if args["--std-dev"]:
-        yerr = list(map(lambda r: r.std_dev, series.icet))
-        plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=yerr)
-    else:
-        plt.plot(x, y, "o-", label="IceT {}".format(res), linewidth=2)
-        #plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2)
-
-    x = list(map(lambda r: r.node_count, series.ospray))
-    y = list(map(lambda r: r.attrib(plot_var), series.ospray))
-    #y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
-    #y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
-    (x, y) = filter_xy_nans(x, y)
-
-    if args["--std-dev"]:
-        yerr = list(map(lambda r: r.std_dev, series.ospray))
-        plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=yerr)
-    else:
-        plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2)
-        #plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2)
-
-ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
-plt.title("Scaling Runs on {} ({} time)".format(machine, plot_var))
-plt.ylabel("Time (ms)")
-plt.xlabel("Nodes")
-plt.legend(loc=0)
 if args["-o"]:
     plt.savefig(args["-o"])
 else:
