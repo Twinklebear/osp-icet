@@ -151,6 +151,7 @@ Options:
     --ranks <ranks>...     plot per-rank data about just the subset of ranks (or all).
                            Put the ranks in quotes because docopt is stupid.
     --rank-var <var>       plot this variable about the ranks
+    --overall              also show overall frame time on the rank data plot
 """
 args = docopt(doc)
 
@@ -237,13 +238,12 @@ def plot_rank_data():
                     continue
 
                 y = rank.get_attrib(args["--rank-var"]).data
-                plt.plot(list(range(0, len(y))), y, "-", label="Rank {}".format(n),
-                        linewidth=2)
+                plt.plot(list(range(0, len(y))), y, "-",
+                        label="Rank {}/{} @ {}".format(n, br.node_count, res), linewidth=2)
 
-            if args["--rank-var"] == "total" or args["--rank-var"] == "rendering" \
-                or args["--rank-var"] == "compositing":
-                    plt.plot(list(range(0, len(br.frame_times.data))), br.frame_times.data,
-                            "--", label="Overall".format(n), linewidth=4)
+            if args["--overall"]:
+                plt.plot(list(range(0, len(br.frame_times.data))), br.frame_times.data,
+                        "--", label="Overall {} @ {}".format(br.node_count, res), linewidth=4)
 
     plt.title("Per-Rank {} data on {}".format(args["--rank-var"], machine))
     if args["--rank-var"] == "cpu_per":
