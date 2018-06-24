@@ -43,6 +43,24 @@ class PerRankStats:
         self.vmsize = Statistic()
         self.vmrss = Statistic()
 
+    def get_attrib(self, atr):
+        if atr == "rendering":
+            return self.rendering
+        if atr == "compositing":
+            return self.compositing
+        if atr == "total":
+            return self.total
+        if atr == "gather":
+            return self.gather
+        if atr == "waiting":
+            return self.waiting
+        if atr == "cpu_per":
+            return self.cpu_per
+        if atr == "vmsize":
+            return self.vmsize
+        if atr == "vmrss":
+            return self.vmrss
+
 class BenchmarkRun:
     def __init__(self, compositor, node_count):
         self.compositor = compositor
@@ -127,10 +145,12 @@ Usage:
     plot_scaling.py <var> <machine> <file>... [options]
 
 Options:
-    -o OUTPUT     save the plot to an output file
-    --min <value> min node count threshold to plot
-    --std-dev     plot std. dev as error bars
-    --ranks       plot rank data histogram
+    -o OUTPUT              save the plot to an output file
+    --min <value>          min node count threshold to plot
+    --std-dev              plot std. dev as error bars
+    --ranks <ranks>...     plot per-rank data about just the subset of ranks (or all).
+                           Put the ranks in quotes because docopt is stupid.
+    --rank-var <var>       plot this variable about the ranks
 """
 args = docopt(doc)
 
@@ -183,7 +203,6 @@ def plot_scaling_set():
         y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
         (x, y) = filter_xy_nans(x, y)
         y_overhead = filter_nans(y_overhead)
-        print(y_overhead)
 
         if args["--std-dev"]:
             yerr = list(map(lambda r: r.std_dev, series.ospray))
@@ -198,19 +217,41 @@ def plot_scaling_set():
     plt.xlabel("Nodes")
     plt.legend(loc=0)
 
-def plot_rank_histogram():
+def plot_rank_data():
+    rank_subset = None
+    if args["--ranks"]:
+        rank_subset = []
+        match_range = re.compile("(\d+)-(\d+)")
+        for x in args["--ranks"].split():
+            m = match_range.match(x)
+            if m:
+                for i in range(int(m.group(1)), int(m.group(2))):
+                    rank_subset.append(int(i))
+            else:
+                rank_subset.append(int(x))
+
     for res,series in scaling_runs.items():
         for br in series.ospray:
             for n,rank in br.rank_data.items():
-                y = rank.total.data
+                if rank_subset and not n in rank_subset:
+                    continue
+
+                y = rank.get_attrib(args["--rank-var"]).data
                 plt.plot(list(range(0, len(y))), y, "-", label="Rank {}".format(n),
                         linewidth=2)
 
-            plt.plot(list(range(0, len(br.frame_times.data))), br.frame_times.data,
-                    "--", label="Overall".format(n), linewidth=2)
+            if args["--rank-var"] == "total" or args["--rank-var"] == "rendering" \
+                or args["--rank-var"] == "compositing":
+                    plt.plot(list(range(0, len(br.frame_times.data))), br.frame_times.data,
+                            "--", label="Overall".format(n), linewidth=4)
 
-    plt.title("Per-Rank data on {}".format(machine, plot_var))
-    plt.ylabel("Total (ms)")
+    plt.title("Per-Rank {} data on {}".format(args["--rank-var"], machine))
+    if args["--rank-var"] == "cpu_per":
+        plt.ylabel("CPU %")
+    elif args["--rank-var"] == "vmsize" or args["--rank-var"] == "vmrss":
+        plt.ylabel("Memory (MB)")
+    else:
+        plt.ylabel("Time (ms)")
     plt.xlabel("Frame")
     plt.legend(loc=0)
 
@@ -284,7 +325,6 @@ for f in args["<file>"]:
     m2 = parse_rank_file.search(f)
     # We have to be careful here because regex sucks
     if m and m2:
-        print("Parsing rank log {}".format(f))
         compositor = m.group(1)
         resolution = "{}x{}".format(m.group(3), m.group(4))
         node_count = int(m.group(2))
@@ -328,18 +368,18 @@ for f in args["<file>"]:
                     continue
                 m = parse_rank_vmsize.search(l)
                 if m:
-                    rank.vmsize.append(int(m.group(1)))
+                    rank.vmsize.append(float(m.group(1)) * 0.001)
                     continue
                 m = parse_rank_vmrss.search(l)
                 if m:
-                    rank.vmrss.append(int(m.group(1)))
+                    rank.vmrss.append(float(m.group(1)) * 0.001)
 
 for res,series in scaling_runs.items():
     series.icet.sort(key=lambda r: r.node_count)
     series.ospray.sort(key=lambda r: r.node_count)
 
-if args["--ranks"]:
-    plot_rank_histogram()
+if args["--rank-var"]:
+    plot_rank_data()
 else:
     plot_scaling_set()
 
