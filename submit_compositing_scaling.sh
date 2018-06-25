@@ -3,8 +3,12 @@
 # Usage:
 # ./submit_compositing_scaling <queue>
 
-export IMAGE_SIZE_X=2048
-export IMAGE_SIZE_Y=2048
+if [ -z "$IMAGE_SIZE_X" ] || [ -z "$IMAGE_SIZE_Y" ]; then
+	export IMAGE_SIZE_X=2048
+	export IMAGE_SIZE_Y=2048
+else
+	echo "Using image settings from command line ${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
+fi
 export BENCH_ITERS=200
 export OSPRAY_DP_API_TRACING=1
 
@@ -26,7 +30,7 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 		export JOB_QUEUE=skx-normal
 	else
 		echo "Assuming $1 is KNL queue"
-		export OSPRAY_THREADS=68
+		export OSPRAY_THREADS=67
 		export JOB_QUEUE=$1
 	fi
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
@@ -59,7 +63,6 @@ fi
 script_dir=$(dirname $(readlink -f $0))
 
 node_counts=(2 4 8 16 32 64 128)
-#node_counts=(128)
 for i in "${node_counts[@]}"; do
 	job_title="bench_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
 
@@ -68,7 +71,7 @@ for i in "${node_counts[@]}"; do
 		job_title="${job_title}-$JOB_QUEUE"
 	fi
 	if [ -n "`command -v sbatch`" ]; then
-		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:10:00 \
+		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:15:00 \
 			$TACC_ARGS \
 			--export=all \
 			-J $job_title -o ${job_title}-%j.txt \
