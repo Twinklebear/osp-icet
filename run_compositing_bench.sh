@@ -30,8 +30,7 @@ fi
 JOBID="${SLURM_JOBID}${COBALT_JOBID}"
 NPROCS="${SLURM_NNODES}${COBALT_PARTSIZE}"
 
-#compositors=(icet ospray)
-compositors=(ospray)
+compositors=(icet ospray)
 for c in "${compositors[@]}"; do
 	export OSPRAY_JOB_NAME="bench_${c}_${NPROCS}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
 	if [ -n "$JOB_QUEUE" ]; then
