@@ -152,6 +152,7 @@ Options:
                            Put the ranks in quotes because docopt is stupid.
     --rank-var <var>       plot this variable about the ranks
     --overall              also show overall frame time on the rank data plot
+    --breakdown            plot the overall compositing and rendering performance breakdown
 """
 args = docopt(doc)
 
@@ -184,33 +185,38 @@ def plot_scaling_set():
         x = list(map(lambda r: r.node_count, series.icet))
         y = list(map(lambda r: r.attrib(plot_var), series.icet))
 
-        y_overhead = list(map(lambda r: r.attrib(plot_var) - r.local_max_render_time.attrib(plot_var),
-            series.icet))
-        y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.icet))
+        if args["--breakdown"]:
+            y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.icet))
 
         (x, y) = filter_xy_nans(x, y)
-        y_overhead = filter_nans(y_overhead)
 
-        if args["--std-dev"]:
-            yerr = list(map(lambda r: r.std_dev, series.icet))
-            plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=yerr)
-        else:
-            plt.plot(x, y, "o-", label="IceT {}".format(res), linewidth=2)
-            plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2)
+        if len(y) > 0:
+            if args["--std-dev"]:
+                yerr = list(map(lambda r: r.std_dev, series.icet))
+                plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=yerr)
+            else:
+                plt.plot(x, y, "o-", label="IceT {}".format(res), linewidth=2)
+                if args["--breakdown"]:
+                    y_overhead = list(map(lambda r: 
+                        r.attrib(plot_var) - r.local_max_render_time.attrib(plot_var), series.icet))
+                    y_overhead = filter_nans(y_overhead)
+                    plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2)
 
         x = list(map(lambda r: r.node_count, series.ospray))
         y = list(map(lambda r: r.attrib(plot_var), series.ospray))
-        y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
-        y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
+        if args["--breakdown"]:
+            y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
         (x, y) = filter_xy_nans(x, y)
-        y_overhead = filter_nans(y_overhead)
 
         if args["--std-dev"]:
             yerr = list(map(lambda r: r.std_dev, series.ospray))
             plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=yerr)
         else:
             plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2)
-            plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2)
+            if args["--breakdown"]:
+                y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
+                y_overhead = filter_nans(y_overhead)
+                plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2)
 
     ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
     plt.title("Scaling Runs on {} ({} time)".format(machine, plot_var))
@@ -231,6 +237,7 @@ def plot_rank_data():
             else:
                 rank_subset.append(int(x))
 
+    plt.figure(figsize=(28,10))
     for res,series in scaling_runs.items():
         for br in series.ospray:
             for n,rank in br.rank_data.items():
@@ -320,59 +327,60 @@ parse_rank_vmsize = re.compile("VmSize:[^\d]+(\d+)")
 parse_rank_vmrss = re.compile("VmRSS:[^\d]+(\d+)")
 
 # Now go through and parse all the per-rank data
-for f in args["<file>"]:
-    m = parse_fname.search(f)
-    m2 = parse_rank_file.search(f)
-    # We have to be careful here because regex sucks
-    if m and m2:
-        compositor = m.group(1)
-        resolution = "{}x{}".format(m.group(3), m.group(4))
-        node_count = int(m.group(2))
-        rank_num = int(m2.group(1))
+if args["--rank-var"]:
+    for f in args["<file>"]:
+        m = parse_fname.search(f)
+        m2 = parse_rank_file.search(f)
+        # We have to be careful here because regex sucks
+        if m and m2:
+            compositor = m.group(1)
+            resolution = "{}x{}".format(m.group(3), m.group(4))
+            node_count = int(m.group(2))
+            rank_num = int(m2.group(1))
 
-        if node_count < min_node_count:
-            continue
+            if node_count < min_node_count:
+                continue
 
-        run = scaling_runs[resolution].get_run(compositor, node_count)
-        if not run:
-            print("Failed to find base run for rank log file {}!?".format(f))
+            run = scaling_runs[resolution].get_run(compositor, node_count)
+            if not run:
+                print("Failed to find base run for rank log file {}!?".format(f))
 
-        rank = PerRankStats()
-        run.rank_data[rank_num] = rank
+            rank = PerRankStats()
+            run.rank_data[rank_num] = rank
 
-        with open(f, 'r') as content:
-            for l in content:
-                m = parse_rank_rendering.search(l)
-                if m:
-                    rank.rendering.append(int(m.group(1)))
-                    continue
-                m = parse_rank_compositing.search(l)
-                if m:
-                    rank.compositing.append(int(m.group(1)))
-                    continue
-                m = parse_rank_total.search(l)
-                if m:
-                    rank.total.append(int(m.group(1)))
-                    continue
-                m = parse_rank_gather.search(l)
-                if m:
-                    rank.gather.append(float(m.group(1)))
-                    continue
-                m = parse_rank_waiting.search(l)
-                if m:
-                    rank.waiting.append(float(m.group(1)))
-                    continue
-                m = parse_rank_cpu_per.search(l)
-                if m:
-                    rank.cpu_per.append(float(m.group(1)))
-                    continue
-                m = parse_rank_vmsize.search(l)
-                if m:
-                    rank.vmsize.append(float(m.group(1)) * 0.001)
-                    continue
-                m = parse_rank_vmrss.search(l)
-                if m:
-                    rank.vmrss.append(float(m.group(1)) * 0.001)
+            with open(f, 'r') as content:
+                for l in content:
+                    m = parse_rank_rendering.search(l)
+                    if m:
+                        rank.rendering.append(int(m.group(1)))
+                        continue
+                    m = parse_rank_compositing.search(l)
+                    if m:
+                        rank.compositing.append(int(m.group(1)))
+                        continue
+                    m = parse_rank_total.search(l)
+                    if m:
+                        rank.total.append(int(m.group(1)))
+                        continue
+                    m = parse_rank_gather.search(l)
+                    if m:
+                        rank.gather.append(float(m.group(1)))
+                        continue
+                    m = parse_rank_waiting.search(l)
+                    if m:
+                        rank.waiting.append(float(m.group(1)))
+                        continue
+                    m = parse_rank_cpu_per.search(l)
+                    if m:
+                        rank.cpu_per.append(float(m.group(1)))
+                        continue
+                    m = parse_rank_vmsize.search(l)
+                    if m:
+                        rank.vmsize.append(float(m.group(1)) * 0.001)
+                        continue
+                    m = parse_rank_vmrss.search(l)
+                    if m:
+                        rank.vmrss.append(float(m.group(1)) * 0.001)
 
 for res,series in scaling_runs.items():
     series.icet.sort(key=lambda r: r.node_count)

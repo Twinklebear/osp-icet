@@ -30,7 +30,7 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 		export JOB_QUEUE=skx-normal
 	else
 		echo "Assuming $1 is KNL queue"
-		export OSPRAY_THREADS=67
+		export OSPRAY_THREADS=68
 		export JOB_QUEUE=$1
 	fi
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
