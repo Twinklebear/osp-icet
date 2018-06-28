@@ -30,7 +30,7 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 		export JOB_QUEUE=skx-normal
 	else
 		echo "Assuming $1 is KNL queue"
-		export OSPRAY_THREADS=67
+		export OSPRAY_THREADS=68
 		export JOB_QUEUE=$1
 	fi
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
@@ -48,7 +48,7 @@ elif [ "`hostname`" == "wopr.sci.utah.edu" ]; then
 	export MACHINE=wopr
 	export JOB_QUEUE=normal
 elif [ "`hostname | head -c 5`" == "theta" ]; then
-	export OSPRAY_THREADS=63
+	export OSPRAY_THREADS=64
 	export MACHINE=theta
 	#export MPICH_NEMESIS_ASYNC_PROGRESS=MC
 	#export MPICH_GNI_ASYNC_PROGRESS_TIMEOUT=0
