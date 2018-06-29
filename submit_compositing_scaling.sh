@@ -62,9 +62,13 @@ fi
 
 script_dir=$(dirname $(readlink -f $0))
 
-node_counts=(2 4 8 16 32 64 128)
+node_counts=(2 4 8 16 32 64 128 256)
 for i in "${node_counts[@]}"; do
-	job_title="bench_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
+	if [ -n "$PREFIX" ]; then
+		export job_title="${PREFIX}-bench_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
+	else
+		export job_title="bench_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
+	fi
 
 	if [ -n "$TACC" ]; then
 		export TACC_ARGS="-A OSPRay -p $JOB_QUEUE"
