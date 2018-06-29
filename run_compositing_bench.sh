@@ -36,6 +36,9 @@ for c in "${compositors[@]}"; do
 	if [ -n "$JOB_QUEUE" ]; then
 		export OSPRAY_JOB_NAME="${OSPRAY_JOB_NAME}-$JOB_QUEUE"
 	fi
+	if [ -n "$PREFIX" ]; then
+		export OSPRAY_JOB_NAME="${PREFIX}-${OSPRAY_JOB_NAME}"
+	fi
 
 	export BENCH_ARGS="-compositor $c \
 		-n $BENCH_ITERS \
