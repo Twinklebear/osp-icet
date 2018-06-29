@@ -50,8 +50,8 @@ elif [ "`hostname`" == "wopr.sci.utah.edu" ]; then
 elif [ "`hostname | head -c 5`" == "theta" ]; then
 	export OSPRAY_THREADS=64
 	export MACHINE=theta
-	#export MPICH_NEMESIS_ASYNC_PROGRESS=MC
-	#export MPICH_GNI_ASYNC_PROGRESS_TIMEOUT=0
+	export MPICH_NEMESIS_ASYNC_PROGRESS=1
+	export MPICH_GNI_ASYNC_PROGRESS_TIMEOUT=0
 	export MPICH_MAX_THREAD_SAFETY=multiple
 fi
 
@@ -88,8 +88,9 @@ for i in "${node_counts[@]}"; do
 		# we'd really want to run all the 2-128 node benchmarks
 		# with a single job
 		THETA_JOB_NODES=$i
-		qsub -n $THETA_JOB_NODES -t 00:30:00 -A UINTAH_aesp \
+		qsub -n $THETA_JOB_NODES -t 00:30:00 -A Viz_Support \
 			-O ${job_title} \
+			-q default \
 			--env "MACHINE=$MACHINE" \
 			--env "OSPRAY_THREADS=$OSPRAY_THREADS" \
 			--env "IMAGE_SIZE_X=$IMAGE_SIZE_X" \
@@ -98,6 +99,9 @@ for i in "${node_counts[@]}"; do
 			--env "BUILD_DIR=$BUILD_DIR" \
 			--env "THETA_JOBNAME=$job_title" \
 			--env "OSPRAY_DP_API_TRACING=$OSPRAY_DP_API_TRACING" \
+			--env "MPICH_NEMESIS_ASYNC_PROGRESS=$MPICH_NEMESIS_ASYNC_PROGRESS" \
+			--env "MPICH_GNI_ASYNC_PROGRESS_TIMEOUT=$MPICH_GNI_ASYNC_PROGRESS_TIMEOUT" \
+			--env "MPICH_MAX_THREAD_SAFETY=multiple" \
 			${script_dir}/run_compositing_bench.sh				
 	fi
 done
