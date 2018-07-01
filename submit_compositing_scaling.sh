@@ -62,6 +62,8 @@ fi
 
 script_dir=$(dirname $(readlink -f $0))
 
+#export TACC_TRACING=1
+
 node_counts=(2 4 8 16 32 64 128 256)
 for i in "${node_counts[@]}"; do
 	if [ -n "$PREFIX" ]; then

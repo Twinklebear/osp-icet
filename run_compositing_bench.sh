@@ -15,11 +15,13 @@ fi
 export OSPRAY_SET_AFFINITY=0
 export OMP_NUM_THREADS=$OSPRAY_THREADS
 
-#source /opt/intel/itac_2018/bin/itacvars.sh
-#export LD_PRELOAD=$LD_PRELOAD:$VT_SLIB_DIR/libVT.so
-#export VT_LOGFILE_PREFIX=${SLURM_JOB_NAME}-${SLURM_JOBID}
-#mkdir $VT_LOGFILE_PREFIX
-#TRACE_ARG="-trace"
+if [ -n "$TACC_TRACING" ]; then
+	source /opt/intel/itac_2018/bin/itacvars.sh
+	export LD_PRELOAD=$LD_PRELOAD:$VT_SLIB_DIR/libVT.so
+	export VT_LOGFILE_PREFIX=${SLURM_JOB_NAME}-${SLURM_JOBID}
+	mkdir $VT_LOGFILE_PREFIX
+	export TRACE_ARG="-trace"
+fi
 
 if [ -n "$WORK_DIR" ]; then
 	echo "Changing to $WORK_DIR"
@@ -30,7 +32,8 @@ fi
 JOBID="${SLURM_JOBID}${COBALT_JOBID}"
 NPROCS="${SLURM_NNODES}${COBALT_PARTSIZE}"
 
-compositors=(icet ospray)
+#compositors=(icet ospray)
+compositors=(ospray)
 for c in "${compositors[@]}"; do
 	export OSPRAY_JOB_NAME="bench_${c}_${NPROCS}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
 	if [ -n "$JOB_QUEUE" ]; then
