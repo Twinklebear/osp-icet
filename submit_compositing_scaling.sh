@@ -64,7 +64,9 @@ script_dir=$(dirname $(readlink -f $0))
 
 #export TACC_TRACING=1
 
-node_counts=(2 4 8 16 32 64 128 256)
+#node_counts=(2 4 8 16 32 64 128 256)
+#node_counts=(128) # 256 512)
+node_counts=(256 512 1024)
 for i in "${node_counts[@]}"; do
 	if [ -n "$PREFIX" ]; then
 		export job_title="${PREFIX}-bench_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
@@ -104,6 +106,7 @@ for i in "${node_counts[@]}"; do
 			--env "MPICH_NEMESIS_ASYNC_PROGRESS=$MPICH_NEMESIS_ASYNC_PROGRESS" \
 			--env "MPICH_GNI_ASYNC_PROGRESS_TIMEOUT=$MPICH_GNI_ASYNC_PROGRESS_TIMEOUT" \
 			--env "MPICH_MAX_THREAD_SAFETY=multiple" \
+			--env "PREFIX=$PREFIX" \
 			${script_dir}/run_compositing_bench.sh				
 	fi
 done

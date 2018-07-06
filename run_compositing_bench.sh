@@ -59,9 +59,15 @@ for c in "${compositors[@]}"; do
 		# On Theta we run jobs for 2-128 nodes on the same 128 node allocation
 		# since 128 is the min size.
 		if [ "$COBALT_PARTSIZE" == "128" ]; then
-			node_counts=(2 4 8 16 32 64 128)
+			node_counts=(4 8 16 32 64 128)
 			for i in "${node_counts[@]}"; do
 				export OSPRAY_JOB_NAME="bench_${c}_${i}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
+				if [ -n "$JOB_QUEUE" ]; then
+					export OSPRAY_JOB_NAME="${OSPRAY_JOB_NAME}-$JOB_QUEUE"
+				fi
+				if [ -n "$PREFIX" ]; then
+					export OSPRAY_JOB_NAME="${PREFIX}-${OSPRAY_JOB_NAME}"
+				fi
 				logfile=${OSPRAY_JOB_NAME}.txt
 
 				export BENCH_ARGS="-compositor $c \
@@ -69,7 +75,7 @@ for c in "${compositors[@]}"; do
 					-img $IMAGE_SIZE_X $IMAGE_SIZE_Y \
 					-o $OSPRAY_JOB_NAME"
 
-				echo "Running $subjob_name"
+				echo "Running $OSPRAY_JOB_NAME"
 				printenv > $logfile
 				aprun -n $i -N 1 -d 64 -cc depth $BUILD_DIR/benchmark $BENCH_ARGS >> $logfile 2>&1
 			done
