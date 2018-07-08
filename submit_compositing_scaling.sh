@@ -46,8 +46,6 @@ elif [ "`hostname`" == "wopr.sci.utah.edu" ]; then
 elif [ "`hostname | head -c 5`" == "theta" ]; then
 	export OSPRAY_THREADS=64
 	export MACHINE=theta
-	#export MPICH_NEMESIS_ASYNC_PROGRESS=1
-	#export MPICH_GNI_ASYNC_PROGRESS_TIMEOUT=0
 	export MPICH_MAX_THREAD_SAFETY=multiple
 fi
 
@@ -97,8 +95,6 @@ for i in "${node_counts[@]}"; do
 			--env "BUILD_DIR=$BUILD_DIR" \
 			--env "THETA_JOBNAME=$job_title" \
 			--env "OSPRAY_DP_API_TRACING=$OSPRAY_DP_API_TRACING" \
-			--env "MPICH_NEMESIS_ASYNC_PROGRESS=$MPICH_NEMESIS_ASYNC_PROGRESS" \
-			--env "MPICH_GNI_ASYNC_PROGRESS_TIMEOUT=$MPICH_GNI_ASYNC_PROGRESS_TIMEOUT" \
 			--env "MPICH_MAX_THREAD_SAFETY=multiple" \
 			--env "PREFIX=$PREFIX" \
 			${script_dir}/run_compositing_bench.sh				
