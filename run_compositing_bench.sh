@@ -7,11 +7,7 @@ fi
 export I_MPI_PIN_RESPECT_CPUSET=0
 export I_MPI_PIN_RESPECT_HCA=0
 export I_MPI_PIN_DOMAIN=omp
-if [ "$JOB_QUEUE" == "skx-normal" ]; then
-	export I_MPI_PIN_PROCESSOR_LIST=all
-else
-	export I_MPI_PIN_PROCESSOR_LIST=allcores
-fi
+export I_MPI_PIN_PROCESSOR_LIST=allcores
 export OSPRAY_SET_AFFINITY=0
 export OMP_NUM_THREADS=$OSPRAY_THREADS
 
@@ -32,8 +28,7 @@ fi
 JOBID="${SLURM_JOBID}${COBALT_JOBID}"
 NPROCS="${SLURM_NNODES}${COBALT_PARTSIZE}"
 
-#compositors=(icet ospray)
-compositors=(ospray)
+compositors=(icet ospray)
 for c in "${compositors[@]}"; do
 	export OSPRAY_JOB_NAME="bench_${c}_${NPROCS}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
 	if [ -n "$JOB_QUEUE" ]; then
