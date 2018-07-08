@@ -73,6 +73,12 @@ class BenchmarkRun:
         self.std_dev = np.nan
         self.compositing_overhead = Statistic()
         self.local_max_render_time = Statistic()
+
+        if compositor == "icet":
+            self.icet_composite_time = Statistic()
+        else:
+            self.icet_composite_time = None
+
         self.frame_times = Statistic()
         self.rank_data = {}
 
@@ -166,6 +172,7 @@ parse_mean = re.compile("mean: (\d+)")
 parse_std_dev = re.compile("std dev: (\d+)")
 parse_compositing_overhead = re.compile("Compositing overhead: (\d+)")
 parse_local_max_render_time = re.compile("Max render time: (\d+)")
+parse_icet_composite_time = re.compile("Frame: \d+ IceT composite time: (\d+(?:\.\d+)?)")
 parse_frame_time = re.compile("Frame: \d+ took: (\d+)")
 
 plot_var = args["<var>"]
@@ -197,8 +204,8 @@ def plot_scaling_set():
             else:
                 plt.plot(x, y, "o-", label="IceT {}".format(res), linewidth=2)
                 if args["--breakdown"]:
-                    y_overhead = list(map(lambda r: 
-                        r.attrib(plot_var) - r.local_max_render_time.attrib(plot_var), series.icet))
+                    y_overhead = list(map(lambda r:
+                        r.icet_composite_time.attrib(plot_var), series.icet))
                     y_overhead = filter_nans(y_overhead)
                     plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2)
 
@@ -314,6 +321,10 @@ for f in args["<file>"]:
                 m = parse_frame_time.search(l)
                 if m:
                     run.frame_times.append(int(m.group(1)))
+                    continue
+                m = parse_icet_composite_time.search(l)
+                if m:
+                    run.icet_composite_time.append(float(m.group(1)))
 
         scaling_runs[resolution].add_run(run)
 
