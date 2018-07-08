@@ -215,7 +215,7 @@ int main(int argc, char **argv) {
 			auto start = high_resolution_clock::now();
 			ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
 			auto end = high_resolution_clock::now();
-			if (rank == 0) {
+			if (rank == 0 && frame > 5) {
 				std::cout << "Frame: " << frame << " took: "
 					<< duration_cast<milliseconds>(end - start).count() << "ms\n";
 			}
@@ -260,6 +260,13 @@ int main(int argc, char **argv) {
 
 		stats = bencher([&](){
 			icet_img = icetDrawFrame(identity_mat.data(), identity_mat.data(), icet_bgcolor.data());
+			if (rank == 0 && frame > 5) {
+				double composite_time = 0;
+				icetGetDoublev(ICET_COMPOSITE_TIME, &composite_time);
+				std::cout << "Frame: " << frame << " IceT composite time: "
+					<< composite_time * 1000.0 << "ms\n";
+			}
+			++frame;
 		});
 	}
 
