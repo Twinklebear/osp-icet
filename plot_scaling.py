@@ -239,7 +239,7 @@ def plot_rank_data():
         for x in args["--ranks"].split():
             m = match_range.match(x)
             if m:
-                for i in range(int(m.group(1)), int(m.group(2))):
+                for i in range(int(m.group(1)), int(m.group(2)) + 1):
                     rank_subset.append(int(i))
             else:
                 rank_subset.append(int(x))
