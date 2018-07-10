@@ -61,7 +61,15 @@ script_dir=$(dirname $(readlink -f $0))
 if [ "$MACHINE" == "theta" ]; then
 	node_counts=(128 256 512)
 elif [ "$MACHINE" == "stampede2" ]; then
-	node_counts=(4 8 16 32 64 128 256)
+	if [ "$JOB_QUEUE" == "normal" ]; then
+		node_counts=(4 8 16 32 64 128 256)
+	elif [ "$JOB_QUEUE" == "large" ]; then
+		node_counts=(512 1024)
+	elif [ "$JOB_QUEUE" == "skx-normal" ]; then
+		node_counts=(4 8 16 32 64 128)
+	elif [ "$JOB_QUEUE" == "skx-large" ]; then
+		node_counts=(256)
+	fi
 else
 	echo "Unrecognized machine, unsure on node counts to scale!"
 	exit 1
