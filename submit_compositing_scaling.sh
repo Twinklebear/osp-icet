@@ -84,7 +84,12 @@ for i in "${node_counts[@]}"; do
 		# we'd really want to run all the 2-128 node benchmarks
 		# with a single job
 		THETA_JOB_NODES=$i
-		qsub -n $THETA_JOB_NODES -t 00:30:00 -A Viz_Support \
+		TIME="00:30:00"
+		if [ "$IMAGE_SIZE_X" == "8192" ]; then
+			TIME="01:00:00"
+		fi
+
+		qsub -n $THETA_JOB_NODES -t $TIME -A Viz_Support \
 			-O ${job_title} \
 			-q default \
 			--env "MACHINE=$MACHINE" \
