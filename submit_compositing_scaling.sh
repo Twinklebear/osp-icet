@@ -59,7 +59,7 @@ script_dir=$(dirname $(readlink -f $0))
 #export TACC_TRACING=1
 
 if [ "$MACHINE" == "theta" ]; then
-	node_counts=(128 256 512)
+	node_counts=(128 256 512 1024)
 elif [ "$MACHINE" == "stampede2" ]; then
 	if [ "$JOB_QUEUE" == "normal" ]; then
 		node_counts=(4 8 16 32 64 128 256)
