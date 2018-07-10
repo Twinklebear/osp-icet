@@ -58,7 +58,15 @@ script_dir=$(dirname $(readlink -f $0))
 
 #export TACC_TRACING=1
 
-node_counts=(4 8 16 32 64 128 256)
+if [ "$MACHINE" == "theta" ]; then
+	node_counts=(128 256 512)
+elif [ "$MACHINE" == "stampede2" ]; then
+	node_counts=(4 8 16 32 64 128 256)
+else
+	echo "Unrecognized machine, unsure on node counts to scale!"
+	exit 1
+fi
+
 for i in "${node_counts[@]}"; do
 	if [ -n "$PREFIX" ]; then
 		export job_title="${PREFIX}-bench_${i}n_${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
