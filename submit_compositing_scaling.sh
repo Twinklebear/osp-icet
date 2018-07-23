@@ -21,7 +21,8 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 	if [ -z "$1" ]; then
 		echo "A queue is required for stampede2!"
 		exit 1
-	elif [ "$1" == "skx-normal" ]; then
+	fi
+	if [ "$1" == "skx-normal" ]; then
 		export OSPRAY_THREADS=48
 		export JOB_QUEUE=skx-normal
 	else
@@ -47,6 +48,12 @@ elif [ "`hostname | head -c 5`" == "theta" ]; then
 	export OSPRAY_THREADS=64
 	export MACHINE=theta
 	export MPICH_MAX_THREAD_SAFETY=multiple
+	if [ -n "$1" ]; then
+		export JOB_QUEUE=$1
+	else
+		echo "Using default queue for Theta"
+		export JOB_QUEUE="default"
+	fi
 fi
 
 if [ -z "$BUILD_DIR" ]; then
@@ -59,7 +66,11 @@ script_dir=$(dirname $(readlink -f $0))
 #export TACC_TRACING=1
 
 if [ "$MACHINE" == "theta" ]; then
-	node_counts=(128 256 512 1024)
+	if [ "$JOB_QUEUE" == "normal" ]; then
+		node_counts=(128 256 512 1024)
+	elif [ "$JOB_QUEUE" == "debug-cache-quad" ]; then
+		node_counts=(4)
+	fi
 elif [ "$MACHINE" == "stampede2" ]; then
 	if [ "$JOB_QUEUE" == "normal" ]; then
 		node_counts=(4 8 16 32 64 128 256)
@@ -107,7 +118,7 @@ for i in "${node_counts[@]}"; do
 
 		qsub -n $THETA_JOB_NODES -t $TIME -A Viz_Support \
 			-O ${job_title} \
-			-q default \
+			-q $JOB_QUEUE \
 			--env "MACHINE=$MACHINE" \
 			--env "OSPRAY_THREADS=$OSPRAY_THREADS" \
 			--env "IMAGE_SIZE_X=$IMAGE_SIZE_X" \
