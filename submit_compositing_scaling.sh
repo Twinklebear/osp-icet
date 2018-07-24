@@ -66,7 +66,7 @@ script_dir=$(dirname $(readlink -f $0))
 #export TACC_TRACING=1
 
 if [ "$MACHINE" == "theta" ]; then
-	if [ "$JOB_QUEUE" == "normal" ]; then
+	if [ "$JOB_QUEUE" == "default" ]; then
 		node_counts=(128 256 512 1024)
 	elif [ "$JOB_QUEUE" == "debug-cache-quad" ]; then
 		node_counts=(4)
