@@ -196,18 +196,39 @@ def plot_scaling_set():
             y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.icet))
 
         (x, y) = filter_xy_nans(x, y)
-
         if len(y) > 0:
+            yerr = list(map(lambda r: r.std_dev, series.icet))
+            y_overhead = list(map(lambda r: r.icet_composite_time.attrib(plot_var), series.icet))
+            y_overhead = filter_nans(y_overhead)
+
+            # TODO: Wrap this up into a function, and have it average
+            # the multiple runs together
+            unique_x = [x[0]]
+            unique_y = [y[0]]
+            unique_yerr = [yerr[0]]
+            unique_yoverhead = [y_overhead[0]]
+            for a, b, err, overh in zip(x, y, yerr, y_overhead):
+                if unique_x[-1] == a:
+                    unique_y[-1] = min(unique_y[-1], b)
+                    unique_yoverhead[-1] = min(unique_yoverhead[-1], overh)
+                else:
+                    unique_x.append(a)
+                    unique_y.append(b)
+                    unique_yerr.append(err)
+                    unique_yoverhead.append(overh)
+
+            x = unique_x
+            y = unique_y
+            yerr = unique_yerr
+            y_overhead = unique_yoverhead
+
             if args["--std-dev"]:
-                yerr = list(map(lambda r: r.std_dev, series.icet))
                 plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=yerr)
             else:
                 plt.plot(x, y, "o-", label="IceT {}".format(res), linewidth=2)
                 if args["--breakdown"]:
-                    y_overhead = list(map(lambda r:
-                        r.icet_composite_time.attrib(plot_var), series.icet))
-                    y_overhead = filter_nans(y_overhead)
                     plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2)
+
 
         x = list(map(lambda r: r.node_count, series.ospray))
         y = list(map(lambda r: r.attrib(plot_var), series.ospray))
@@ -215,14 +236,34 @@ def plot_scaling_set():
             y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
         (x, y) = filter_xy_nans(x, y)
 
+        yerr = list(map(lambda r: r.std_dev, series.ospray))
+        y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
+        y_overhead = filter_nans(y_overhead)
+        unique_x = [x[0]]
+        unique_y = [y[0]]
+        unique_yerr = [yerr[0]]
+        unique_yoverhead = [y_overhead[0]]
+        for a, b, err, overh in zip(x, y, yerr, y_overhead):
+            if unique_x[-1] == a:
+                unique_y[-1] = min(unique_y[-1], b)
+                unique_yoverhead[-1] = min(unique_yoverhead[-1], overh)
+            else:
+                unique_x.append(a)
+                unique_y.append(b)
+                unique_yerr.append(err)
+                unique_yoverhead.append(overh)
+
+        x = unique_x
+        y = unique_y
+        yerr = unique_yerr
+        y_overhead = unique_yoverhead
+
+
         if args["--std-dev"]:
-            yerr = list(map(lambda r: r.std_dev, series.ospray))
             plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=yerr)
         else:
             plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2)
             if args["--breakdown"]:
-                y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
-                y_overhead = filter_nans(y_overhead)
                 plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2)
 
     ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
