@@ -151,15 +151,8 @@ int main(int argc, char **argv) {
 
 	OSPModel model = ospNewModel();
 	ospAddVolume(model, volume);
+	ospSet1i(model, "id", rank);
 
-	// For correct compositing we must specify a list of regions that bound the
-	// data owned by this rank. These region bounds will be used for sort-last
-	// compositing when rendering.
-	const DistributedRegion region_info(box3f(grid_origin, grid_origin + vec3f(brick_dims)), rank);
-	if (use_ospray_compositing) {
-		OSPData region_data = ospNewData(sizeof(region_info), OSP_RAW, &region_info);
-		ospSetData(model, "regions", region_data);
-	}
 	ospCommit(model);
 
 	// Position the camera based on the world bounds, which go from
