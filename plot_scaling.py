@@ -237,6 +237,7 @@ def plot_scaling_set():
         (x, y) = filter_xy_nans(x, y)
 
         yerr = list(map(lambda r: r.std_dev, series.ospray))
+        yerr = filter_nans(yerr)
         y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
         y_overhead = filter_nans(y_overhead)
         unique_x = [x[0]]
