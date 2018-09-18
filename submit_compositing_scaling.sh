@@ -12,12 +12,12 @@ fi
 export BENCH_ITERS=200
 export OSPRAY_DP_API_TRACING=1
 
+export MPICH_MAX_THREAD_SAFETY=multiple
+
 export CLUSTER_NAME="`hostname -d`"
 if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 	export MACHINE=stampede2
 	export TACC=true
-	#export BUILD_DIR=$WORK/osp-icet/build-trace
-	export BUILD_DIR=$WORK/osp-icet/build
 	if [ -z "$1" ]; then
 		echo "A queue is required for stampede2!"
 		exit 1
@@ -80,6 +80,8 @@ elif [ "$MACHINE" == "stampede2" ]; then
 		node_counts=(4 8 16 32 64 128)
 	elif [ "$JOB_QUEUE" == "skx-large" ]; then
 		node_counts=(256)
+	elif [ "$JOB_QUEUE" == "development" ]; then
+		node_counts=(2)
 	fi
 else
 	echo "Unrecognized machine, unsure on node counts to scale!"
