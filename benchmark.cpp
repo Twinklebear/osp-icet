@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
 	// Create a framebuffer to render the image too
 	// TODO: Test the new gather stuff with fb accum
 	framebuffer = ospNewFrameBuffer((osp::vec2i&)img_size, OSP_FB_RGBA8,
-			OSP_FB_COLOR);
+			OSP_FB_COLOR | OSP_FB_ACCUM);
 	ospFrameBufferClear(framebuffer, OSP_FB_COLOR);
 
 	IceTImage icet_img = icetImageNull();
