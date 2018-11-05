@@ -18,6 +18,7 @@
 #include <IceTMPI.h>
 #include "util.h"
 #include "pico_bench.h"
+#include "arcball.h"
 
 using namespace ospcommon;
 using namespace std::chrono;
@@ -157,15 +158,16 @@ int main(int argc, char **argv) {
 
 	// Position the camera based on the world bounds, which go from
 	// [0, 0, 0] to the upper corner of the last brick
-	const vec3f world_diagonal = vec3f((world_size - 1) % grid.x,
-			((world_size - 1) / grid.x) % grid.y,
-			(world_size - 1) / (grid.x * grid.y))
-		* vec3f(brick_dims) + vec3f(brick_dims);
+	const box3f world_bounds(vec3f(0),
+			vec3f((world_size - 1) % grid.x,
+				((world_size - 1) / grid.x) % grid.y,
+				(world_size - 1) / (grid.x * grid.y))
+			* vec3f(brick_dims) + vec3f(brick_dims));
 
-	const vec3f cam_pos = world_diagonal * vec3f(1.5);
-	const vec3f cam_up(0, 1, 0);
-	const vec3f cam_at = world_diagonal * vec3f(0.5);
-	const vec3f cam_dir = cam_at - cam_pos;
+	Arcball arcball(world_bounds, img_size);
+	vec3f cam_pos = arcball.eyePos();
+	vec3f cam_up = arcball.upDir();
+	vec3f cam_dir = arcball.lookDir();
 	const float cam_fovy = 60.f;
 
 	// Setup the camera we'll render the scene from
@@ -208,11 +210,24 @@ int main(int argc, char **argv) {
 			auto start = high_resolution_clock::now();
 			ospRenderFrame(framebuffer, renderer, OSP_FB_COLOR);
 			auto end = high_resolution_clock::now();
+
+			auto renderTime = duration_cast<milliseconds>(end - start);
 			if (rank == 0 && frame > 5) {
 				std::cout << "Frame: " << frame << " took: "
 					<< duration_cast<milliseconds>(end - start).count() << "ms\n";
 			}
+			// Slowly rotate the camera round the dataset
+			arcball.rotate(vec2f(0), vec2f(0.1, 0));
+			cam_pos = arcball.eyePos();
+			cam_up = arcball.upDir();
+			cam_dir = arcball.lookDir();
+			ospSet3fv(camera, "pos", &cam_pos.x);
+			ospSet3fv(camera, "up", &cam_up.x);
+			ospSet3fv(camera, "dir", &cam_dir.x);
+			ospCommit(camera);
+			ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
 			++frame;
+			return renderTime;
 		});
 	} else {
 		auto icet_comm = icetCreateMPICommunicator(MPI_COMM_WORLD);
@@ -225,24 +240,12 @@ int main(int argc, char **argv) {
 		icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_UBYTE);
 		icetSetDepthFormat(ICET_IMAGE_DEPTH_NONE);
 
-		// Compute the sort order for the ranks and give it to IceT
-		std::vector<VolumeBrick> volume_bricks = VolumeBrick::compute_grid_bricks(grid, brick_dims);
-		std::sort(volume_bricks.begin(), volume_bricks.end(),
-			[&](const VolumeBrick &a, const VolumeBrick &b) {
-				return a.max_distance_from(cam_pos) < b.max_distance_from(cam_pos);
-			}
-		);
-		std::vector<int> process_order;
-		for (auto &b : volume_bricks) {
-			process_order.push_back(b.owner);
-		}
-		icetCompositeOrder(process_order.data());
-
 		icetResetTiles();
 		icetAddTile(0, 0, img_size.x, img_size.y, 0);
 		icetStrategy(ICET_STRATEGY_REDUCE);
 
 		icetDrawCallback(ospray_draw_callback);
+
 		std::array<double, 16> identity_mat = {
 			1, 0, 0, 0,
 			0, 1, 0, 0,
@@ -251,15 +254,45 @@ int main(int argc, char **argv) {
 		};
 		const std::array<float, 4> icet_bgcolor = {0.1f, 0.1f, 0.1f, 0.0f};
 
+
 		stats = bencher([&](){
+			// Compute the sort order for the ranks and give it to IceT
+			std::vector<VolumeBrick> volume_bricks = VolumeBrick::compute_grid_bricks(grid, brick_dims);
+			std::sort(volume_bricks.begin(), volume_bricks.end(),
+				[&](const VolumeBrick &a, const VolumeBrick &b) {
+					return a.max_distance_from(cam_pos) < b.max_distance_from(cam_pos);
+				}
+			);
+			std::vector<int> process_order;
+			for (auto &b : volume_bricks) {
+				process_order.push_back(b.owner);
+			}
+			icetCompositeOrder(process_order.data());
+
+			auto start = high_resolution_clock::now();
 			icet_img = icetDrawFrame(identity_mat.data(), identity_mat.data(), icet_bgcolor.data());
+			auto end = high_resolution_clock::now();
+			auto renderTime = duration_cast<milliseconds>(end - start);
+
 			if (rank == 0 && frame > 5) {
 				double composite_time = 0;
 				icetGetDoublev(ICET_COMPOSITE_TIME, &composite_time);
 				std::cout << "Frame: " << frame << " IceT composite time: "
 					<< composite_time * 1000.0 << "ms\n";
 			}
+
+			// Slowly rotate the camera round the dataset
+			arcball.rotate(vec2f(0), vec2f(0.1, 0));
+			cam_pos = arcball.eyePos();
+			cam_up = arcball.upDir();
+			cam_dir = arcball.lookDir();
+			ospSet3fv(camera, "pos", &cam_pos.x);
+			ospSet3fv(camera, "up", &cam_up.x);
+			ospSet3fv(camera, "dir", &cam_dir.x);
+			ospCommit(camera);
+			ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
 			++frame;
+			return renderTime;
 		});
 	}
 
