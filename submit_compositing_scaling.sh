@@ -73,7 +73,7 @@ if [ "$MACHINE" == "theta" ]; then
 	fi
 elif [ "$MACHINE" == "stampede2" ]; then
 	if [ "$JOB_QUEUE" == "normal" ]; then
-		node_counts=(4 8 16 32 64 128 256)
+		node_counts=(4 8 16 32 64) # 128)  #256)
 	elif [ "$JOB_QUEUE" == "large" ]; then
 		node_counts=(512 1024)
 	elif [ "$JOB_QUEUE" == "skx-normal" ]; then
