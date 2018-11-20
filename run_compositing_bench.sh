@@ -4,27 +4,7 @@ if [ -n "$TACC" ]; then
 	module restore
 fi
 
-get_physical_cores() {
-	echo `grep "^cpu\\scores" /proc/cpuinfo | uniq | awk '{print $4}'`
-}
-
-set_ospray_env_vars() {
-	export I_MPI_PIN_RESPECT_CPUSET=0
-	export I_MPI_PIN_RESPECT_HCA=0
-	export I_MPI_PIN_DOMAIN=omp
-	export I_MPI_PIN_PROCESSOR_LIST=allcores
-	export OSPRAY_SET_AFFINITY=0
-	export OSPRAY_THREADS=$(get_physical_cores)
-	export OMP_NUM_THREADS=$OSPRAY_THREADS
-}
-
-
-export I_MPI_PIN_RESPECT_CPUSET=0
-export I_MPI_PIN_RESPECT_HCA=0
-export I_MPI_PIN_DOMAIN=omp
-export I_MPI_PIN_PROCESSOR_LIST=allcores
-export OSPRAY_SET_AFFINITY=0
-export OMP_NUM_THREADS=$OSPRAY_THREADS
+source ${SCRIPT_DIR}/set_ospray_vars.sh
 
 if [ -n "$TACC_TRACING" ]; then
 	source /opt/intel/itac_2018/bin/itacvars.sh

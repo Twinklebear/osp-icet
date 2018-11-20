@@ -9,45 +9,39 @@ if [ -z "$IMAGE_SIZE_X" ] || [ -z "$IMAGE_SIZE_Y" ]; then
 else
 	echo "Using image settings from command line ${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
 fi
-export BENCH_ITERS=200
+
+export BENCH_ITERS=300
 export OSPRAY_DP_API_TRACING=1
-
-export MPICH_MAX_THREAD_SAFETY=multiple
-
 export CLUSTER_NAME="`hostname -d`"
+
+if [[ "$CLUSTER_NAME" == *"tacc"* ]]; then
+	export TACC=true
+fi
+
 if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 	export MACHINE=stampede2
-	export TACC=true
 	if [ -z "$1" ]; then
 		echo "A queue is required for stampede2!"
 		exit 1
 	fi
 	if [ "$1" == "skx-normal" ]; then
-		export OSPRAY_THREADS=48
 		export JOB_QUEUE=skx-normal
 	else
 		echo "Assuming $1 is KNL queue"
-		export OSPRAY_THREADS=68
 		export JOB_QUEUE=$1
 	fi
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
-	export OSPRAY_THREADS=20
 	export MACHINE=ls5
-	export TACC=true
 	export JOB_QUEUE=normal
 elif [ "$CLUSTER_NAME" == "maverick.tacc.utexas.edu" ]; then
-	export OSPRAY_THREADS=20
 	export MACHINE=maverick
-	export TACC=true
 	export JOB_QUEUE=vis
 elif [ "`hostname`" == "wopr.sci.utah.edu" ]; then
-	export OSPRAY_THREADS=32
 	export MACHINE=wopr
 	export JOB_QUEUE=normal
 elif [ "`hostname | head -c 5`" == "theta" ]; then
 	export OSPRAY_THREADS=64
 	export MACHINE=theta
-	export MPICH_MAX_THREAD_SAFETY=multiple
 	if [ -n "$1" ]; then
 		export JOB_QUEUE=$1
 	else
@@ -61,7 +55,7 @@ if [ -z "$BUILD_DIR" ]; then
 	exit 1
 fi
 
-script_dir=$(dirname $(readlink -f $0))
+export SCRIPT_DIR=$(dirname $(readlink -f $0))
 
 #export TACC_TRACING=1
 
@@ -104,14 +98,10 @@ for i in "${node_counts[@]}"; do
 			$TACC_ARGS \
 			--export=all \
 			-J $job_title -o ${job_title}-%j.txt \
-			${script_dir}/run_compositing_bench.sh
+			${SCRIPT_DIR}/run_compositing_bench.sh
 	elif [ -n "`command -v qsub`" ]; then
 		# A lot of crap for theta and qsub because cobalt is
 		# dumb to pick up my environment
-		#THETA_JOB_NODES=$(( $i > 8 ? $i : 8 ))
-		# TODO: Theta increased to 128 node min, so instead
-		# we'd really want to run all the 2-128 node benchmarks
-		# with a single job
 		THETA_JOB_NODES=$i
 		TIME="00:30:00"
 		if [ "$IMAGE_SIZE_X" == "8192" ]; then
@@ -129,9 +119,9 @@ for i in "${node_counts[@]}"; do
 			--env "BUILD_DIR=$BUILD_DIR" \
 			--env "THETA_JOBNAME=$job_title" \
 			--env "OSPRAY_DP_API_TRACING=$OSPRAY_DP_API_TRACING" \
-			--env "MPICH_MAX_THREAD_SAFETY=multiple" \
 			--env "PREFIX=$PREFIX" \
-			${script_dir}/run_compositing_bench.sh				
+			--env "SCRIPT_DIR=$SCRIPT_DIR" \
+			${SCRIPT_DIR}/run_compositing_bench.sh				
 	fi
 done
 
