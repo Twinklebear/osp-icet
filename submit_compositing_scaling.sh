@@ -108,7 +108,7 @@ for i in "${node_counts[@]}"; do
 			TIME="01:00:00"
 		fi
 
-		qsub -n $THETA_JOB_NODES -t $TIME -A Viz_Support \
+		qsub -n $THETA_JOB_NODES -t $TIME -A UINTAH_aesp \
 			-O ${job_title} \
 			-q $JOB_QUEUE \
 			--env "MACHINE=$MACHINE" \
