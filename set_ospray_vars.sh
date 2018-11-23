@@ -12,7 +12,7 @@ set_ospray_env_vars() {
 	export OSPRAY_SET_AFFINITY=0
 	# If it's not set (i.e, we're not on Theta) figure out the node's phys. cores
 	# On theta this script runs on the mom node, and the core count would be wrong
-	if [ -n "$OSPRAY_THREADS"]; then
+	if [ -z "$OSPRAY_THREADS"]; then
 		export OSPRAY_THREADS=$(get_physical_cores)
 	fi
 	export OMP_NUM_THREADS=$OSPRAY_THREADS
