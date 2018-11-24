@@ -10,6 +10,12 @@
 #include <array>
 #include <cstdio>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <execinfo.h>
+#include <signal.h>
+#include <unistd.h>
 #include <mpi.h>
 #include <ospray/ospray.h>
 #include <ospray/ospcommon/vec.h>
@@ -38,12 +44,25 @@ struct DistributedRegion {
 	DistributedRegion(box3f bounds, int id) : bounds(bounds), id(id) {}
 };
 
+void handler(int sig) {
+	void *array[128] = {0};
+	size_t size = backtrace(array, 128);
+	const std::string fname = "crash-log-rank" + std::to_string(rank) + ".txt";
+	int fd = open(fname.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+	backtrace_symbols_fd(array, size, fd);
+	close(fd);
+	fsync(fd);
+	std::exit(sig);
+}
+
 void ospray_draw_callback(const double *proj_mat, const double *modelview_mat,
 		const float *bg_color, const int *readback_viewport, IceTImage result);
 void write_ppm(const std::string &file_name, const int width, const int height,
 		const uint32_t *img);
 
 int main(int argc, char **argv) {
+	signal(SIGSEGV, handler);
+
 	std::vector<std::string> args{argv, argv + argc};
 	if (std::find(args.begin(), args.end(), "-compositor") == args.end()) {
 		std::cerr << "A compositor to benchmark is required (-compositor (ospray|icet)\n";
