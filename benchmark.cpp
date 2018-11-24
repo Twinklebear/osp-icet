@@ -30,6 +30,7 @@ using namespace ospcommon;
 using namespace std::chrono;
 
 int world_size, rank;
+size_t frame_number = 0;
 vec2i img_size(1024, 1024);
 bool use_ospray_compositing = true;
 size_t benchmark_iters = 1;
@@ -49,6 +50,8 @@ void handler(int sig) {
 	size_t size = backtrace(array, 128);
 	const std::string fname = "crash-log-rank" + std::to_string(rank) + ".txt";
 	int fd = open(fname.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+	std::string msg = "Crashed on frame: " + std::to_string(frame_number);
+	write(fd, msg.c_str(), msg.size());
 	backtrace_symbols_fd(array, size, fd);
 	close(fd);
 	fsync(fd);
@@ -221,7 +224,6 @@ int main(int argc, char **argv) {
 
 	IceTContext icet_context;
 
-	size_t frame = 0;
 	// Render the image and save it out
 	if (use_ospray_compositing) {
 		using namespace std::chrono;
@@ -231,8 +233,8 @@ int main(int argc, char **argv) {
 			auto end = high_resolution_clock::now();
 
 			auto renderTime = duration_cast<milliseconds>(end - start);
-			if (rank == 0 && frame > 5) {
-				std::cout << "Frame: " << frame << " took: "
+			if (rank == 0 && frame_number > 5) {
+				std::cout << "Frame: " << frame_number << " took: "
 					<< duration_cast<milliseconds>(end - start).count() << "ms\n";
 			}
 			// Slowly rotate the camera round the dataset
@@ -245,7 +247,7 @@ int main(int argc, char **argv) {
 			ospSet3fv(camera, "dir", &cam_dir.x);
 			ospCommit(camera);
 			ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
-			++frame;
+			++frame_number;
 			return renderTime;
 		});
 	} else {
@@ -293,10 +295,10 @@ int main(int argc, char **argv) {
 			auto end = high_resolution_clock::now();
 			auto renderTime = duration_cast<milliseconds>(end - start);
 
-			if (rank == 0 && frame > 5) {
+			if (rank == 0 && frame_number > 5) {
 				double composite_time = 0;
 				icetGetDoublev(ICET_COMPOSITE_TIME, &composite_time);
-				std::cout << "Frame: " << frame << " IceT composite time: "
+				std::cout << "Frame: " << frame_number << " IceT composite time: "
 					<< composite_time * 1000.0 << "ms\n";
 			}
 
@@ -310,7 +312,7 @@ int main(int argc, char **argv) {
 			ospSet3fv(camera, "dir", &cam_dir.x);
 			ospCommit(camera);
 			ospFrameBufferClear(framebuffer, OSP_FB_COLOR | OSP_FB_ACCUM);
-			++frame;
+			++frame_number;
 			return renderTime;
 		});
 	}

@@ -23,16 +23,17 @@ fi
 JOBID="${SLURM_JOBID}${COBALT_JOBID}"
 NPROCS="${SLURM_NNODES}${COBALT_PARTSIZE}"
 
-compositors=(ospray icet)
+compositors=(ospray)
 for c in "${compositors[@]}"; do
-	export OSPRAY_JOB_NAME="bench_${c}_${NPROCS}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
+	export JOB_NAME="bench_${c}_${NPROCS}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
 	if [ -n "$JOB_QUEUE" ]; then
-		export OSPRAY_JOB_NAME="${OSPRAY_JOB_NAME}-$JOB_QUEUE"
+		export JOB_NAME="${JOB_NAME}-$JOB_QUEUE"
 	fi
 	if [ -n "$PREFIX" ]; then
-		export OSPRAY_JOB_NAME="${PREFIX}-${OSPRAY_JOB_NAME}"
+		export JOB_NAME="${PREFIX}-${JOB_NAME}"
 	fi
 
+	export OSPRAY_JOB_NAME="$SCRATCH/osp-icet/${JOB_NAME}"
 	export BENCH_ARGS="-compositor $c \
 		-n $BENCH_ITERS \
 		-img $IMAGE_SIZE_X $IMAGE_SIZE_Y \
@@ -51,13 +52,14 @@ for c in "${compositors[@]}"; do
 		if [ "$COBALT_PARTSIZE" == "128" ]; then
 			node_counts=(4 8 16 32 64 128)
 			for i in "${node_counts[@]}"; do
-				export OSPRAY_JOB_NAME="bench_${c}_${i}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
+				export JOB_NAME="bench_${c}_${i}n_${IMAGE_SIZE_Y}x${IMAGE_SIZE_Y}-${JOBID}"
 				if [ -n "$JOB_QUEUE" ]; then
-					export OSPRAY_JOB_NAME="${OSPRAY_JOB_NAME}-$JOB_QUEUE"
+					export JOB_NAME="${JOB_NAME}-$JOB_QUEUE"
 				fi
 				if [ -n "$PREFIX" ]; then
-					export OSPRAY_JOB_NAME="${PREFIX}-${OSPRAY_JOB_NAME}"
+					export JOB_NAME="${PREFIX}-${JOB_NAME}"
 				fi
+				export OSPRAY_JOB_NAME="$SCRATCH/osp-icet/${JOB_NAME}"
 				logfile=${OSPRAY_JOB_NAME}.txt
 
 				export BENCH_ARGS="-compositor $c \
@@ -65,12 +67,11 @@ for c in "${compositors[@]}"; do
 					-img $IMAGE_SIZE_X $IMAGE_SIZE_Y \
 					-o $OSPRAY_JOB_NAME"
 
-				echo "Running $OSPRAY_JOB_NAME"
+				echo "Running $JOB_NAME"
 				printenv > $logfile
 				aprun -n $i -N 1 -d 64 -cc depth $BUILD_DIR/benchmark $BENCH_ARGS >> $logfile 2>&1
 			done
 		else
-			logfile=${OSPRAY_JOB_NAME}.txt
 			aprun -n $COBALT_PARTSIZE -N 1 -d 64 -cc depth $BUILD_DIR/benchmark $BENCH_ARGS >> $logfile 2>&1
 		fi
 	fi

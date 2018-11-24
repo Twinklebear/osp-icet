@@ -10,7 +10,7 @@ else
 	echo "Using image settings from command line ${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
 fi
 
-export BENCH_ITERS=300
+export BENCH_ITERS=150
 export OSPRAY_DP_API_TRACING=1
 export CLUSTER_NAME="`hostname -d`"
 
@@ -67,9 +67,10 @@ if [ "$MACHINE" == "theta" ]; then
 	fi
 elif [ "$MACHINE" == "stampede2" ]; then
 	if [ "$JOB_QUEUE" == "normal" ]; then
-		node_counts=(4 8 16 32 64) # 128)  #256)
+		#node_counts=(4 8 16 32 64 128 256)
+		node_counts=(32)
 	elif [ "$JOB_QUEUE" == "large" ]; then
-		node_counts=(512 1024)
+		node_counts=(1024)
 	elif [ "$JOB_QUEUE" == "skx-normal" ]; then
 		node_counts=(4 8 16 32 64 128)
 	elif [ "$JOB_QUEUE" == "skx-large" ]; then
@@ -90,11 +91,11 @@ for i in "${node_counts[@]}"; do
 	fi
 
 	if [ -n "$TACC" ]; then
-		export TACC_ARGS="-A OSPRay -p $JOB_QUEUE"
+		export TACC_ARGS="-A OSPRay -p $JOB_QUEUE -x c464-021"
 		job_title="${job_title}-$JOB_QUEUE"
 	fi
 	if [ -n "`command -v sbatch`" ]; then
-		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:15:00 \
+		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:05:00 \
 			$TACC_ARGS \
 			--export=all \
 			-J $job_title -o ${job_title}-%j.txt \
