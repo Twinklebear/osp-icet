@@ -10,7 +10,7 @@ else
 	echo "Using image settings from command line ${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
 fi
 
-export BENCH_ITERS=150
+export BENCH_ITERS=300
 export OSPRAY_DP_API_TRACING=1
 export CLUSTER_NAME="`hostname -d`"
 
@@ -95,7 +95,7 @@ for i in "${node_counts[@]}"; do
 		job_title="${job_title}-$JOB_QUEUE"
 	fi
 	if [ -n "`command -v sbatch`" ]; then
-		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:05:00 \
+		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:10:00 \
 			$TACC_ARGS \
 			--export=all \
 			-J $job_title -o ${job_title}-%j.txt \
