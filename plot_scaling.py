@@ -7,6 +7,7 @@ import matplotlib
 import numpy as np
 import scipy
 import itertools
+from matplotlib import rc
 from docopt import docopt
 
 import matplotlib.pyplot as plt
@@ -180,6 +181,13 @@ machine = args["<machine>"]
 min_node_count = -1
 if args["--min"]:
     min_node_count = int(args["--min"])
+
+if args["-o"] and os.path.splitext(args["-o"])[1] == ".pdf":
+    #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+    ## for Palatino and other serif fonts use:
+    rc('font',**{'family':'serif','serif':['Palatino']})
+    rc('text', usetex=True)
+
 
 scaling_runs = {}
 
@@ -445,7 +453,11 @@ else:
     plot_scaling_set()
 
 if args["-o"]:
-    plt.savefig(args["-o"])
+    if os.path.splitext(args["-o"])[1] == ".png":
+        plt.savefig(args["-o"], dpi=150, bbox_inches="tight")
+    else:
+        plt.savefig(args["-o"], bbox_inches="tight")
+    print("saved to {}".format(args["-o"]))
 else:
     plt.show()
 
