@@ -34,7 +34,8 @@ class Statistic:
             return np.std(self.data)
 
 class PerRankStats:
-    def __init__(self):
+    def __init__(self, num):
+        self.rank_num = num
         self.rendering = Statistic()
         self.compositing = Statistic()
         self.total = Statistic()
@@ -302,7 +303,10 @@ def plot_rank_data():
                     continue
 
                 y = rank.get_attrib(args["--rank-var"]).data
-                plt.plot(list(range(0, len(y))), y, "-",
+                style = "-"
+                if rank.rank_num == 0:
+                    style = "--"
+                plt.plot(list(range(0, len(y))), y, style,
                         label="Rank {}/{} @ {}".format(n, br.node_count, res), linewidth=2)
 
             if args["--overall"]:
@@ -317,7 +321,7 @@ def plot_rank_data():
     else:
         plt.ylabel("Time (ms)")
     plt.xlabel("Frame")
-    plt.legend(loc=0)
+    #plt.legend(loc=0)
 
 for f in args["<file>"]:
     m = parse_fname.search(f)
@@ -406,7 +410,7 @@ if args["--rank-var"]:
             if not run:
                 print("Failed to find base run for rank log file {}!?".format(f))
 
-            rank = PerRankStats()
+            rank = PerRankStats(rank_num)
             run.rank_data[rank_num] = rank
 
             with open(f, 'r') as content:
