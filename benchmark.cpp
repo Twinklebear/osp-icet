@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 			vec3f(1, 0, 0),
 			vec3f(0.5, 0, 0)
 		};
-		const std::vector<float> opacities = {0.05f, 0.05f};
+		const std::vector<float> opacities = {0.02f, 0.05f, 0.01f, 0.06f, 0.01f, 0.03f};
 		OSPData colors_data = ospNewData(colors.size(), OSP_FLOAT3, colors.data());
 		ospCommit(colors_data);
 		OSPData opacity_data = ospNewData(opacities.size(), OSP_FLOAT, opacities.data());
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
 	// Setup our piece of the volume data, each rank has some brick of
 	// volume data within the [0, 1] box
 	OSPVolume volume = ospNewVolume("block_bricked_volume");
-	// TODO: Ghost zones.
+	const vec3i ghost_brick_dims(66);
 	const vec3i brick_dims(64);
 	const vec3i grid = compute_grid3d(world_size);
 	const vec3i brick_id(rank % grid.x,
@@ -160,22 +160,28 @@ int main(int argc, char **argv) {
 
 	// We use the grid_origin to translate the bricks to the right location
 	// in the space.
-	const vec3f grid_origin = vec3f(brick_id) * vec3f(brick_dims);
+	const vec3f region_lower = vec3f(brick_id) * vec3f(brick_dims);
+	const vec3f region_upper = (vec3f(brick_id) + vec3f(1)) * vec3f(brick_dims);
+	const vec3f grid_origin = region_lower - vec3f(1);
+	std::cout << "Region: " << region_lower << ", " << region_upper
+		<< ", grid origin: " << grid_origin << "\n";
 
 	ospSetString(volume, "voxelType", "uchar");
-	ospSetVec3i(volume, "dimensions", (osp::vec3i&)brick_dims);
+	ospSetVec3i(volume, "dimensions", (osp::vec3i&)ghost_brick_dims);
 	ospSetVec3f(volume, "gridOrigin", (osp::vec3f&)grid_origin);
 	ospSetObject(volume, "transferFunction", transfer_fcn);
 
-	std::vector<unsigned char> volume_data(brick_dims.x * brick_dims.y * brick_dims.z,
+	std::vector<unsigned char> volume_data(ghost_brick_dims.x * ghost_brick_dims.y * ghost_brick_dims.z,
 			static_cast<unsigned char>(rank));
-	ospSetRegion(volume, volume_data.data(), osp::vec3i{0, 0, 0}, (osp::vec3i&)brick_dims);
+	ospSetRegion(volume, volume_data.data(), osp::vec3i{0, 0, 0}, (osp::vec3i&)ghost_brick_dims);
 	ospCommit(volume);
 
 	OSPModel model = ospNewModel();
 	ospAddVolume(model, volume);
 	ospSet1i(model, "id", rank);
-
+	// Set clipping box for the ghost voxels
+	ospSetVec3f(model, "region.lower", (osp::vec3f&)region_lower);
+	ospSetVec3f(model, "region.upper", (osp::vec3f&)region_upper);
 	ospCommit(model);
 
 	// Position the camera based on the world bounds, which go from
