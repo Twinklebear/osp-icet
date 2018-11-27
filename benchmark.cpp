@@ -163,8 +163,6 @@ int main(int argc, char **argv) {
 	const vec3f region_lower = vec3f(brick_id) * vec3f(brick_dims);
 	const vec3f region_upper = (vec3f(brick_id) + vec3f(1)) * vec3f(brick_dims);
 	const vec3f grid_origin = region_lower - vec3f(1);
-	std::cout << "Region: " << region_lower << ", " << region_upper
-		<< ", grid origin: " << grid_origin << "\n";
 
 	ospSetString(volume, "voxelType", "uchar");
 	ospSetVec3i(volume, "dimensions", (osp::vec3i&)ghost_brick_dims);
