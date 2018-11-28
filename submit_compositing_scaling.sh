@@ -55,13 +55,15 @@ if [ -z "$BUILD_DIR" ]; then
 	exit 1
 fi
 
-export SCRIPT_DIR=$(dirname $(readlink -f $0))
+if [ -z $TACC ]; then
+	export SCRATCH=/projects/UINTAH_aesp/will/
+fi
 
-#export TACC_TRACING=1
+export SCRIPT_DIR=$(dirname $(readlink -f $0))
 
 if [ "$MACHINE" == "theta" ]; then
 	if [ "$JOB_QUEUE" == "default" ]; then
-		node_counts=(128 256 512 1024)
+		node_counts=(128 256)
 	elif [ "$JOB_QUEUE" == "debug-cache-quad" ]; then
 		node_counts=(4)
 	fi
@@ -122,6 +124,7 @@ for i in "${node_counts[@]}"; do
 			--env "OSPRAY_DP_API_TRACING=$OSPRAY_DP_API_TRACING" \
 			--env "PREFIX=$PREFIX" \
 			--env "SCRIPT_DIR=$SCRIPT_DIR" \
+			--env "SCRATCH=$SCRATCH" \
 			${SCRIPT_DIR}/run_compositing_bench.sh				
 	fi
 done

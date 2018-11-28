@@ -6,14 +6,6 @@ fi
 
 source ${SCRIPT_DIR}/set_ospray_vars.sh
 
-if [ -n "$TACC_TRACING" ]; then
-	source /opt/intel/itac_2018/bin/itacvars.sh
-	export LD_PRELOAD=$LD_PRELOAD:$VT_SLIB_DIR/libVT.so
-	export VT_LOGFILE_PREFIX=${SLURM_JOB_NAME}-${SLURM_JOBID}
-	mkdir $VT_LOGFILE_PREFIX
-	export TRACE_ARG="-trace"
-fi
-
 if [ -n "$WORK_DIR" ]; then
 	echo "Changing to $WORK_DIR"
 	cd $WORK_DIR
