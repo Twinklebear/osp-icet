@@ -150,7 +150,7 @@ def filter_xy_nans(x, y):
 doc = """Plot Scaling
 
 Usage:
-    plot_scaling.py <var> <machine> <file>... [options]
+    plot_scaling.py <var> <title> <file>... [options]
 
 Options:
     -o OUTPUT              save the plot to an output file
@@ -178,7 +178,7 @@ parse_icet_composite_time = re.compile("Frame: \d+ IceT composite time: (\d+(?:\
 parse_frame_time = re.compile("Frame: \d+ took: (\d+)")
 
 plot_var = args["<var>"]
-machine = args["<machine>"]
+title = args["<title>"]
 min_node_count = -1
 if args["--min"]:
     min_node_count = int(args["--min"])
@@ -189,11 +189,11 @@ if args["-o"] and os.path.splitext(args["-o"])[1] == ".pdf":
     rc('font',**{'family':'serif','serif':['Palatino']})
     rc('text', usetex=True)
 
+ax = plt.subplot(111)
 
 scaling_runs = {}
 
 def plot_scaling_set():
-    ax = plt.subplot(111)
     ax.set_xscale("log", basex=2, nonposx="clip")
     #ax.set_yscale("log", basey=2, nonposy="clip")
 
@@ -277,7 +277,7 @@ def plot_scaling_set():
                 plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2)
 
     ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
-    plt.title("Scaling Runs on {} ({} time)".format(machine, plot_var))
+    plt.title(title)
     plt.ylabel("Time (ms)")
     plt.xlabel("Nodes")
     plt.legend(loc=0)
@@ -313,7 +313,7 @@ def plot_rank_data():
                 plt.plot(list(range(0, len(br.frame_times.data))), br.frame_times.data,
                         "--", label="Overall {} @ {}".format(br.node_count, res), linewidth=4)
 
-    plt.title("Per-Rank {} data on {}".format(args["--rank-var"], machine))
+    plt.title("{} per-rank {} data".format(args["--rank-var"], title))
     if args["--rank-var"] == "cpu_per":
         plt.ylabel("CPU %")
     elif args["--rank-var"] == "vmsize" or args["--rank-var"] == "vmrss":
@@ -451,10 +451,18 @@ for res,series in scaling_runs.items():
     series.icet.sort(key=lambda r: r.node_count)
     series.ospray.sort(key=lambda r: r.node_count)
 
+# To adjust the fig size if we want
+#plt.figure(figsize=(8,3.5))
+
 if args["--rank-var"]:
     plot_rank_data()
 else:
     plot_scaling_set()
+
+ax.spines["right"].set_visible(False)
+ax.spines["top"].set_visible(False)
+ax.yaxis.set_ticks_position("left")
+ax.xaxis.set_ticks_position("bottom")
 
 if args["-o"]:
     if os.path.splitext(args["-o"])[1] == ".png":
