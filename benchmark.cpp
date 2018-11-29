@@ -64,7 +64,7 @@ void write_ppm(const std::string &file_name, const int width, const int height,
 		const uint32_t *img);
 
 int main(int argc, char **argv) {
-	signal(SIGSEGV, handler);
+	//signal(SIGSEGV, handler);
 
 	std::vector<std::string> args{argv, argv + argc};
 	if (std::find(args.begin(), args.end(), "-compositor") == args.end()) {
