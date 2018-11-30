@@ -25,6 +25,7 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 		exit 1
 	fi
 	if [ "$1" == "skx-normal" ]; then
+		export OSPRAY_THREADS=48
 		export JOB_QUEUE=skx-normal
 	else
 		echo "Assuming $1 is KNL queue"
@@ -69,8 +70,7 @@ if [ "$MACHINE" == "theta" ]; then
 	fi
 elif [ "$MACHINE" == "stampede2" ]; then
 	if [ "$JOB_QUEUE" == "normal" ]; then
-		#node_counts=(4 8 16 32 64 128 256)
-		node_counts=(32)
+		node_counts=(4 8 16 32 64 128 256)
 	elif [ "$JOB_QUEUE" == "large" ]; then
 		node_counts=(1024)
 	elif [ "$JOB_QUEUE" == "skx-normal" ]; then
@@ -97,7 +97,7 @@ for i in "${node_counts[@]}"; do
 		job_title="${job_title}-$JOB_QUEUE"
 	fi
 	if [ -n "`command -v sbatch`" ]; then
-		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:10:00 \
+		sbatch -n $i -N $i --ntasks-per-node=1 -t 00:15:00 \
 			$TACC_ARGS \
 			--export=all \
 			-J $job_title -o ${job_title}-%j.txt \
