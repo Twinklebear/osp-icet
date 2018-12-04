@@ -7,9 +7,11 @@ import matplotlib
 import numpy as np
 import scipy
 import itertools
+import pandas
 from matplotlib import rc
+from matplotlib import cm
 from docopt import docopt
-
+import pandas as pd
 import matplotlib.pyplot as plt
 
 class Statistic:
@@ -32,6 +34,11 @@ class Statistic:
             return np.mean(self.data)
         if atr == "std_dev":
             return np.std(self.data)
+        if atr == "median_abs_dev":
+            df = pd.DataFrame()
+            df['d'] = self.data
+            return df['d'].mad()
+
 
 class PerRankStats:
     def __init__(self, num):
@@ -161,6 +168,7 @@ Options:
     --rank-var <var>       plot this variable about the ranks
     --overall              also show overall frame time on the rank data plot
     --breakdown            plot the overall compositing and rendering performance breakdown
+    --mad                  plot error as median abs. deviation
 """
 args = docopt(doc)
 
@@ -197,6 +205,13 @@ def plot_scaling_set():
     ax.set_xscale("log", basex=2, nonposx="clip")
     #ax.set_yscale("log", basey=2, nonposy="clip")
 
+    colors = cm.get_cmap("tab20c", 20)
+    if args["--breakdown"]:
+        color_step = 1.0 / 10.0
+    else:
+        color_step = 1.0 / 5.0
+    next_color = 0
+
     for res,series in scaling_runs.items():
         x = list(map(lambda r: r.node_count, series.icet))
         y = list(map(lambda r: r.attrib(plot_var), series.icet))
@@ -207,6 +222,7 @@ def plot_scaling_set():
         (x, y) = filter_xy_nans(x, y)
         if len(y) > 0:
             yerr = list(map(lambda r: r.std_dev, series.icet))
+            ymad = list(map(lambda r: r.median_abs_dev, series.icet))
             y_overhead = list(map(lambda r: r.icet_composite_time.attrib(plot_var), series.icet))
             y_overhead = filter_nans(y_overhead)
 
@@ -215,8 +231,9 @@ def plot_scaling_set():
             unique_x = [x[0]]
             unique_y = [y[0]]
             unique_yerr = [yerr[0]]
+            unique_ymad = [ymad[0]]
             unique_yoverhead = [y_overhead[0]]
-            for a, b, err, overh in zip(x, y, yerr, y_overhead):
+            for a, b, err, mad, overh in zip(x, y, yerr, ymad, y_overhead):
                 if unique_x[-1] == a:
                     unique_y[-1] = min(unique_y[-1], b)
                     unique_yoverhead[-1] = min(unique_yoverhead[-1], overh)
@@ -224,20 +241,29 @@ def plot_scaling_set():
                     unique_x.append(a)
                     unique_y.append(b)
                     unique_yerr.append(err)
+                    unique_ymad.append(mad)
                     unique_yoverhead.append(overh)
 
             x = unique_x
             y = unique_y
             yerr = unique_yerr
+            ymad = unique_ymad
             y_overhead = unique_yoverhead
 
             if args["--std-dev"]:
-                plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=yerr)
+                plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=yerr,
+                        color=colors(next_color))
+            elif args["--mad"]:
+                plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=ymad,
+                        color=colors(next_color))
             else:
-                plt.plot(x, y, "o-", label="IceT {}".format(res), linewidth=2)
+                plt.plot(x, y, "o-", label="IceT {}".format(res), linewidth=2,
+                        color=colors(next_color))
                 if args["--breakdown"]:
-                    plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2)
-
+                    next_color = next_color + color_step
+                    plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2,
+                        color=colors(next_color))
+            next_color = next_color + color_step
 
         x = list(map(lambda r: r.node_count, series.ospray))
         y = list(map(lambda r: r.attrib(plot_var), series.ospray))
@@ -246,14 +272,17 @@ def plot_scaling_set():
         (x, y) = filter_xy_nans(x, y)
 
         yerr = list(map(lambda r: r.std_dev, series.ospray))
+        ymad = list(map(lambda r: r.median_abs_dev, series.ospray))
         yerr = filter_nans(yerr)
+        yerr = filter_nans(ymad)
         y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
         y_overhead = filter_nans(y_overhead)
         unique_x = [x[0]]
         unique_y = [y[0]]
         unique_yerr = [yerr[0]]
+        unique_ymad = [ymad[0]]
         unique_yoverhead = [y_overhead[0]]
-        for a, b, err, overh in zip(x, y, yerr, y_overhead):
+        for a, b, err, mad, overh in zip(x, y, yerr, ymad, y_overhead):
             if unique_x[-1] == a:
                 unique_y[-1] = min(unique_y[-1], b)
                 unique_yoverhead[-1] = min(unique_yoverhead[-1], overh)
@@ -261,26 +290,36 @@ def plot_scaling_set():
                 unique_x.append(a)
                 unique_y.append(b)
                 unique_yerr.append(err)
+                unique_ymad.append(mad)
                 unique_yoverhead.append(overh)
 
         x = unique_x
         y = unique_y
         yerr = unique_yerr
+        ymad = unique_ymad
         y_overhead = unique_yoverhead
 
-
         if args["--std-dev"]:
-            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=yerr)
+            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=yerr,
+                    color=colors(next_color))
+        elif args["--mad"]:
+            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=ymad,
+                    color=colors(next_color))
         else:
-            plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2)
+            plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2,
+                    color=colors(next_color))
             if args["--breakdown"]:
-                plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2)
+                next_color = next_color + color_step
+                plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2,
+                        color=colors(next_color))
+        next_color = next_color + color_step
 
     ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
     plt.title(title)
     plt.ylabel("Time (ms)")
     plt.xlabel("Nodes")
-    plt.legend(loc=0)
+    if not args["--breakdown"]:
+        plt.legend(loc=0)
 
 def plot_rank_data():
     rank_subset = None
