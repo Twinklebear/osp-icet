@@ -213,6 +213,57 @@ def plot_scaling_set():
     next_color = 0
 
     for res,series in scaling_runs.items():
+        # Plot OSPRay run
+        x = list(map(lambda r: r.node_count, series.ospray))
+        y = list(map(lambda r: r.attrib(plot_var), series.ospray))
+        if args["--breakdown"]:
+            y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
+        (x, y) = filter_xy_nans(x, y)
+
+        yerr = list(map(lambda r: r.std_dev, series.ospray))
+        ymad = list(map(lambda r: r.median_abs_dev, series.ospray))
+        yerr = filter_nans(yerr)
+        yerr = filter_nans(ymad)
+        y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
+        y_overhead = filter_nans(y_overhead)
+        unique_x = [x[0]]
+        unique_y = [y[0]]
+        unique_yerr = [yerr[0]]
+        unique_ymad = [ymad[0]]
+        unique_yoverhead = [y_overhead[0]]
+        for a, b, err, mad, overh in zip(x, y, yerr, ymad, y_overhead):
+            if unique_x[-1] == a:
+                unique_y[-1] = min(unique_y[-1], b)
+                unique_yoverhead[-1] = min(unique_yoverhead[-1], overh)
+            else:
+                unique_x.append(a)
+                unique_y.append(b)
+                unique_yerr.append(err)
+                unique_ymad.append(mad)
+                unique_yoverhead.append(overh)
+
+        x = unique_x
+        y = unique_y
+        yerr = unique_yerr
+        ymad = unique_ymad
+        y_overhead = unique_yoverhead
+
+        if args["--std-dev"]:
+            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=yerr,
+                    color=colors(next_color))
+        elif args["--mad"]:
+            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=ymad,
+                    color=colors(next_color))
+        else:
+            plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2,
+                    color=colors(next_color))
+            if args["--breakdown"]:
+                next_color = next_color + color_step
+                plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2,
+                        color=colors(next_color))
+        next_color = next_color + color_step
+
+        # Plot IceT run if there is one
         x = list(map(lambda r: r.node_count, series.icet))
         y = list(map(lambda r: r.attrib(plot_var), series.icet))
 
@@ -264,55 +315,6 @@ def plot_scaling_set():
                     plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2,
                         color=colors(next_color))
             next_color = next_color + color_step
-
-        x = list(map(lambda r: r.node_count, series.ospray))
-        y = list(map(lambda r: r.attrib(plot_var), series.ospray))
-        if args["--breakdown"]:
-            y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
-        (x, y) = filter_xy_nans(x, y)
-
-        yerr = list(map(lambda r: r.std_dev, series.ospray))
-        ymad = list(map(lambda r: r.median_abs_dev, series.ospray))
-        yerr = filter_nans(yerr)
-        yerr = filter_nans(ymad)
-        y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
-        y_overhead = filter_nans(y_overhead)
-        unique_x = [x[0]]
-        unique_y = [y[0]]
-        unique_yerr = [yerr[0]]
-        unique_ymad = [ymad[0]]
-        unique_yoverhead = [y_overhead[0]]
-        for a, b, err, mad, overh in zip(x, y, yerr, ymad, y_overhead):
-            if unique_x[-1] == a:
-                unique_y[-1] = min(unique_y[-1], b)
-                unique_yoverhead[-1] = min(unique_yoverhead[-1], overh)
-            else:
-                unique_x.append(a)
-                unique_y.append(b)
-                unique_yerr.append(err)
-                unique_ymad.append(mad)
-                unique_yoverhead.append(overh)
-
-        x = unique_x
-        y = unique_y
-        yerr = unique_yerr
-        ymad = unique_ymad
-        y_overhead = unique_yoverhead
-
-        if args["--std-dev"]:
-            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=yerr,
-                    color=colors(next_color))
-        elif args["--mad"]:
-            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=ymad,
-                    color=colors(next_color))
-        else:
-            plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2,
-                    color=colors(next_color))
-            if args["--breakdown"]:
-                next_color = next_color + color_step
-                plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2,
-                        color=colors(next_color))
-        next_color = next_color + color_step
 
     ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
     plt.title(title)
