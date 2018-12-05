@@ -197,6 +197,7 @@ if args["-o"] and os.path.splitext(args["-o"])[1] == ".pdf":
     rc('font',**{'family':'serif','serif':['Palatino']})
     rc('text', usetex=True)
 
+plt.figure(figsize=(6.4, 3.8))
 ax = plt.subplot(111)
 
 scaling_runs = {}
@@ -248,18 +249,24 @@ def plot_scaling_set():
         ymad = unique_ymad
         y_overhead = unique_yoverhead
 
+        res_str = "2kx2k"
+        if res == "4096x4096":
+            res_str = "4kx4k"
+        elif res == "8092x8092":
+            res_str = "8kx8k"
+
         if args["--std-dev"]:
-            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=yerr,
+            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res_str), linewidth=2, yerr=yerr,
                     color=colors(next_color))
         elif args["--mad"]:
-            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res), linewidth=2, yerr=ymad,
+            plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res_str), linewidth=2, yerr=ymad,
                     color=colors(next_color))
         else:
-            plt.plot(x, y, "o-", label="OSPRay {}".format(res), linewidth=2,
+            plt.plot(x, y, "o-", label="OSPRay Local {}".format(res_str), linewidth=2,
                     color=colors(next_color))
             if args["--breakdown"]:
                 next_color = next_color + color_step
-                plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res), linewidth=2,
+                plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res_str), linewidth=2,
                         color=colors(next_color))
         next_color = next_color + color_step
 
@@ -302,17 +309,17 @@ def plot_scaling_set():
             y_overhead = unique_yoverhead
 
             if args["--std-dev"]:
-                plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=yerr,
+                plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res_str), linewidth=2, yerr=yerr,
                         color=colors(next_color))
             elif args["--mad"]:
-                plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res), linewidth=2, yerr=ymad,
+                plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res_str), linewidth=2, yerr=ymad,
                         color=colors(next_color))
             else:
-                plt.plot(x, y, "o-", label="IceT {}".format(res), linewidth=2,
+                plt.plot(x, y, "o-", label="IceT Local {}".format(res_str), linewidth=2,
                         color=colors(next_color))
                 if args["--breakdown"]:
                     next_color = next_color + color_step
-                    plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res), linewidth=2,
+                    plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res_str), linewidth=2,
                         color=colors(next_color))
             next_color = next_color + color_step
 
@@ -320,7 +327,9 @@ def plot_scaling_set():
     plt.title(title)
     plt.ylabel("Time (ms)")
     plt.xlabel("Nodes")
+    #plt.ylim((0, 50))
     if not args["--breakdown"]:
+        plt.legend(loc=1, ncol=2, fontsize="small")
         plt.legend(loc=0)
 
 def plot_rank_data():
