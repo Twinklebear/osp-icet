@@ -197,7 +197,7 @@ if args["-o"] and os.path.splitext(args["-o"])[1] == ".pdf":
     rc('font',**{'family':'serif','serif':['Palatino']})
     rc('text', usetex=True)
 
-plt.figure(figsize=(6.4, 3.8))
+#plt.figure(figsize=(6.4, 3.8))
 ax = plt.subplot(111)
 
 scaling_runs = {}
@@ -327,10 +327,8 @@ def plot_scaling_set():
     plt.title(title)
     plt.ylabel("Time (ms)")
     plt.xlabel("Nodes")
-    #plt.ylim((0, 50))
-    if not args["--breakdown"]:
-        plt.legend(loc=1, ncol=2, fontsize="small")
-        plt.legend(loc=0)
+    #plt.ylim((0, 300))
+    plt.legend(loc=1, ncol=2, fontsize="small")
 
 def plot_rank_data():
     rank_subset = None
