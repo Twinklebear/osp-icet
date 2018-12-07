@@ -263,11 +263,11 @@ def plot_scaling_set():
                     color=colors(next_color))
         else:
             plt.plot(x, y, "o-", label="OSPRay Local {}".format(res_str), linewidth=2,
-                    color=colors(next_color))
+                    color=colors(next_color + color_step))
             if args["--breakdown"]:
-                next_color = next_color + color_step
                 plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res_str), linewidth=2,
-                        color=colors(next_color))
+                        color=colors(next_color), zorder=10)
+                next_color = next_color + color_step
         next_color = next_color + color_step
 
         # Plot IceT run if there is one
@@ -316,18 +316,18 @@ def plot_scaling_set():
                         color=colors(next_color))
             else:
                 plt.plot(x, y, "o-", label="IceT Local {}".format(res_str), linewidth=2,
-                        color=colors(next_color))
+                        color=colors(next_color + color_step))
                 if args["--breakdown"]:
-                    next_color = next_color + color_step
                     plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res_str), linewidth=2,
-                        color=colors(next_color))
+                        color=colors(next_color), zorder=10)
+                    next_color = next_color + color_step
             next_color = next_color + color_step
 
     ax.get_xaxis().set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
     plt.title(title)
     plt.ylabel("Time (ms)")
     plt.xlabel("Nodes")
-    #plt.ylim((0, 300))
+    #plt.ylim((0, 350))
     plt.legend(loc=1, ncol=2, fontsize="small")
 
 def plot_rank_data():
