@@ -197,7 +197,7 @@ if args["-o"] and os.path.splitext(args["-o"])[1] == ".pdf":
     rc('font',**{'family':'serif','serif':['Palatino']})
     rc('text', usetex=True)
 
-#plt.figure(figsize=(6.4, 3.8))
+plt.figure(figsize=(6.4, 3.8))
 ax = plt.subplot(111)
 
 scaling_runs = {}
@@ -214,17 +214,20 @@ def plot_scaling_set():
     next_color = 0
 
     for res,series in scaling_runs.items():
+        print("Res: {}".format(res))
         # Plot OSPRay run
         x = list(map(lambda r: r.node_count, series.ospray))
         y = list(map(lambda r: r.attrib(plot_var), series.ospray))
-        if args["--breakdown"]:
-            y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
-        (x, y) = filter_xy_nans(x, y)
-
         yerr = list(map(lambda r: r.std_dev, series.ospray))
         ymad = list(map(lambda r: r.median_abs_dev, series.ospray))
+        if args["--breakdown"]:
+            y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.ospray))
+            ymad = list(map(lambda r: r.local_max_render_time.attrib("median_abs_dev"), series.ospray))
+            ymad_overhead = list(map(lambda r: r.compositing_overhead.attrib("median_abs_dev"), series.ospray))
+        (x, y) = filter_xy_nans(x, y)
+
         yerr = filter_nans(yerr)
-        yerr = filter_nans(ymad)
+        ymad = filter_nans(ymad)
         y_overhead = list(map(lambda r: r.compositing_overhead.attrib(plot_var), series.ospray))
         y_overhead = filter_nans(y_overhead)
         unique_x = [x[0]]
@@ -262,11 +265,11 @@ def plot_scaling_set():
             plt.errorbar(x, y, fmt="o-", label="OSPRay {}".format(res_str), linewidth=2, yerr=ymad,
                     color=colors(next_color))
         else:
-            plt.plot(x, y, "o-", label="OSPRay Local {}".format(res_str), linewidth=2,
-                    color=colors(next_color + color_step))
+            plt.errorbar(x, y, fmt="o-", label="OSPRay Local {}".format(res_str), linewidth=2,
+                    yerr=ymad, color=colors(next_color + color_step))
             if args["--breakdown"]:
-                plt.plot(x, y_overhead, "o--", label="OSPRay Overhead {}".format(res_str), linewidth=2,
-                        color=colors(next_color), zorder=10)
+                plt.errorbar(x, y_overhead, fmt="o--", label="OSPRay Overhead {}".format(res_str),
+                        linewidth=2, yerr=ymad_overhead, color=colors(next_color), zorder=10)
                 next_color = next_color + color_step
         next_color = next_color + color_step
 
@@ -283,6 +286,10 @@ def plot_scaling_set():
             ymad = list(map(lambda r: r.median_abs_dev, series.icet))
             y_overhead = list(map(lambda r: r.icet_composite_time.attrib(plot_var), series.icet))
             y_overhead = filter_nans(y_overhead)
+            if args["--breakdown"]:
+                y = list(map(lambda r: r.local_max_render_time.attrib(plot_var), series.icet))
+                ymad = list(map(lambda r: r.local_max_render_time.attrib("median_abs_dev"), series.icet))
+                ymad_overhead = list(map(lambda r: r.icet_composite_time.attrib("median_abs_dev"), series.icet))
 
             # TODO: Wrap this up into a function, and have it average
             # the multiple runs together
@@ -315,11 +322,12 @@ def plot_scaling_set():
                 plt.errorbar(x, y, fmt="o-", label="IceT {}".format(res_str), linewidth=2, yerr=ymad,
                         color=colors(next_color))
             else:
-                plt.plot(x, y, "o-", label="IceT Local {}".format(res_str), linewidth=2,
-                        color=colors(next_color + color_step))
+                plt.errorbar(x, y, fmt="o-", yerr=ymad, label="IceT Local {}".format(res_str),
+                        linewidth=2, color=colors(next_color + color_step))
                 if args["--breakdown"]:
-                    plt.plot(x, y_overhead, "o--", label="IceT Overhead {}".format(res_str), linewidth=2,
-                        color=colors(next_color), zorder=10)
+                    plt.errorbar(x, y_overhead, fmt="o--", yerr=ymad_overhead,
+                            label="IceT Overhead {}".format(res_str), linewidth=2,
+                            color=colors(next_color), zorder=10)
                     next_color = next_color + color_step
             next_color = next_color + color_step
 
@@ -327,7 +335,7 @@ def plot_scaling_set():
     plt.title(title)
     plt.ylabel("Time (ms)")
     plt.xlabel("Nodes")
-    #plt.ylim((0, 350))
+    #plt.ylim((0, 300))
     plt.legend(loc=1, ncol=2, fontsize="small")
 
 def plot_rank_data():
