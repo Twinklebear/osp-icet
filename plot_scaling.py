@@ -213,8 +213,8 @@ def plot_scaling_set():
         color_step = 1.0 / 5.0
     next_color = 0
 
-    for res,series in scaling_runs.items():
-        print("Res: {}".format(res))
+    for res in sorted(list(scaling_runs.keys())):
+        series = scaling_runs[res]
         # Plot OSPRay run
         x = list(map(lambda r: r.node_count, series.ospray))
         y = list(map(lambda r: r.attrib(plot_var), series.ospray))
