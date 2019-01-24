@@ -74,7 +74,7 @@ elif [ "$MACHINE" == "stampede2" ]; then
 	elif [ "$JOB_QUEUE" == "large" ]; then
 		node_counts=(1024)
 	elif [ "$JOB_QUEUE" == "skx-normal" ]; then
-		node_counts=(4 8 16 32 64 128)
+		node_counts=(64)
 	elif [ "$JOB_QUEUE" == "skx-large" ]; then
 		node_counts=(256)
 	elif [ "$JOB_QUEUE" == "development" ]; then
@@ -93,7 +93,7 @@ for i in "${node_counts[@]}"; do
 	fi
 
 	if [ -n "$TACC" ]; then
-		export TACC_ARGS="-A OSPRay -p $JOB_QUEUE -x c464-021"
+		export TACC_ARGS="-A OSPRay -p $JOB_QUEUE"
 		job_title="${job_title}-$JOB_QUEUE"
 	fi
 	if [ -n "`command -v sbatch`" ]; then
