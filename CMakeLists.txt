@@ -1,16 +1,29 @@
 cmake_minimum_required(VERSION 3.5)
 project(osp_icet)
 
-set(CMAKE_CXX_STANDARD 14)
+if (NOT WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
+endif()
 
-find_package(ospray REQUIRED)
+find_package(ospray 2.0 REQUIRED)
 find_package(IceT REQUIRED)
 find_package(MPI REQUIRED)
-include_directories(${OSPRAY_INCLUDE_DIRS} ${MPI_CXX_INCLUDE_PATH}
+find_package(TBB REQUIRED)
+
+add_executable(osp_icet main.cpp util.cpp loader.cpp)
+
+set_target_properties(osp_icet PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED ON)
+
+target_include_directories(osp_icet PUBLIC
 	${ICET_INCLUDE_DIRS})
 
-add_executable(benchmark benchmark.cpp util.cpp arcball.cpp)
-target_link_libraries(benchmark ${OSPRAY_LIBRARIES} ${MPI_CXX_LIBRARIES}
-	${ICET_CORE_LIBS} ${ICET_MPI_LIBS})
-
+target_link_libraries(osp_icet PUBLIC
+    ospray::ospray
+    ospcommon::ospcommon
+    MPI::MPI_CXX
+    TBB::tbb
+	${ICET_CORE_LIBS}
+    ${ICET_MPI_LIBS})
 

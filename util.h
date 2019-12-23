@@ -1,29 +1,60 @@
 #pragma once
 
-#include <vector>
-#include <cmath>
 #include <string>
-#include <ospray/ospcommon/vec.h>
-#include <ospray/ospcommon/box.h>
+#include <vector>
+#include <ospcommon/math/vec.h>
+#include <tbb/parallel_reduce.h>
+#include <tbb/tbb.h>
+#include "json.hpp"
 
-struct VolumeBrick {
-	ospcommon::vec3i id, origin, dims;
-	int owner;
+using namespace ospcommon::math;
+using json = nlohmann::json;
 
-	VolumeBrick(const ospcommon::vec3i &brick_id, const ospcommon::vec3i &dims,
-			int owner);
-	float max_distance_from(const ospcommon::vec3f &p) const;
+// Read the contents of a file into the string
+std::string get_file_content(const std::string &fname);
 
-	static std::vector<VolumeBrick> compute_grid_bricks(const ospcommon::vec3i &grid,
-			const ospcommon::vec3i &brick_dims);
-};
-std::ostream& operator<<(std::ostream &os, const VolumeBrick &b);
+std::string get_file_extension(const std::string &fname);
 
-void write_ppm(const std::string &file_name, const int width, const int height,
-		const uint32_t *img);
-bool compute_divisor(int x, int &divisor);
-ospcommon::vec3i compute_grid3d(int num);
-ospcommon::vec2i compute_grid2d(int num);
+std::string get_file_basename(const std::string &path);
+
+std::string get_file_basepath(const std::string &path);
+
+bool starts_with(const std::string &str, const std::string &prefix);
+
+std::vector<vec3f> generate_fibonacci_sphere(const size_t n_points, const float radius);
+
 // Hue: [0, 360], sat & val: [0, 1]
-ospcommon::vec3f hsv_to_rgb(const float hue, const float sat, const float val);
+vec3f hsv_to_rgb(const float hue, const float sat, const float val);
+
+template <typename T, size_t N>
+inline vec_t<T, N> get_vec(const json &j)
+{
+    vec_t<T, N> v;
+    for (size_t i = 0; i < N; ++i) {
+        v[i] = j[i].get<T>();
+    }
+    return v;
+}
+
+template <typename T>
+vec2f compute_value_range(const T *vals, size_t n_vals)
+{
+    using range_type = tbb::blocked_range<const T *>;
+    auto min_val = tbb::parallel_reduce(range_type(vals, vals + n_vals),
+                                        vals[0],
+                                        [](const range_type &r, const T &b) {
+                                            auto m = std::min_element(r.begin(), r.end());
+                                            return std::min(*m, b);
+                                        },
+                                        [](const T &a, const T &b) { return std::min(a, b); });
+
+    auto max_val = tbb::parallel_reduce(range_type(vals, vals + n_vals),
+                                        vals[0],
+                                        [](const range_type &r, const T &b) {
+                                            auto m = std::max_element(r.begin(), r.end());
+                                            return std::max(*m, b);
+                                        },
+                                        [](const T &a, const T &b) { return std::max(a, b); });
+    return vec2f(min_val, max_val);
+}
 
