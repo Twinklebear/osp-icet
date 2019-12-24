@@ -28,15 +28,6 @@ struct VolumeBrick {
     vec3i full_dims;
 
     std::shared_ptr<std::vector<uint8_t>> voxel_data;
-
-    /*
-    VolumeBrick(const ospcommon::vec3i &brick_id, const ospcommon::vec3i &dims,
-            int owner);
-    float max_distance_from(const ospcommon::vec3f &p) const;
-
-    static std::vector<VolumeBrick> compute_grid_bricks(const ospcommon::vec3i &grid,
-            const ospcommon::vec3i &brick_dims);
-            */
 };
 
 struct Camera {

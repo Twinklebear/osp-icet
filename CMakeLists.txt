@@ -10,7 +10,11 @@ find_package(IceT REQUIRED)
 find_package(MPI REQUIRED)
 find_package(TBB REQUIRED)
 
-add_executable(osp_icet main.cpp util.cpp loader.cpp)
+add_executable(osp_icet
+    main.cpp
+    util.cpp
+    loader.cpp
+    render_backend.cpp)
 
 set_target_properties(osp_icet PROPERTIES
     CXX_STANDARD 14

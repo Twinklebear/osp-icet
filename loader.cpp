@@ -21,32 +21,6 @@
 #include <vtkUnsignedShortArray.h>
 #endif
 
-/*
- *
-float VolumeBrick::max_distance_from(const ospcommon::vec3f &p) const {
-    // Need to check along (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0),
-    // (1, 0, 1), (0, 1, 1), (1, 1, 1) directions for each corner
-    static const std::array<vec3f, 8> dirs = {
-        vec3f(0, 0, 0), vec3f(1, 0, 0), vec3f(0, 1, 0), vec3f(0, 0, 1),
-        vec3f(1, 1, 0), vec3f(1, 0, 1), vec3f(0, 1, 1), vec3f(1, 1, 1)
-    };
-    float max_dist = std::numeric_limits<float>::lowest();
-    for (const auto &d : dirs){
-        max_dist = std::max(length(vec3f(origin) + d * vec3f(dims) - p), max_dist);
-    }
-    return max_dist;
-}
-std::vector<VolumeBrick> VolumeBrick::compute_grid_bricks(const vec3i &grid, const vec3i
-&brick_dims) { std::vector<VolumeBrick> bricks; int owner = 0; for (int z = 0; z < grid.z; ++z)
-{ for (int y = 0; y < grid.y; ++y) { for (int x = 0; x < grid.x; ++x) {
-                bricks.emplace_back(vec3i(x, y, z), brick_dims, owner++);
-            }
-        }
-    }
-    return bricks;
-}
-*/
-
 Camera::Camera(const vec3f &pos, const vec3f &dir, const vec3f &up)
     : pos(pos), dir(dir), up(up)
 {
@@ -115,6 +89,7 @@ VolumeBrick load_volume_brick(json &config, const int mpi_rank, const int mpi_si
     brick.full_dims = brick.dims;
     vec3i brick_read_offset = brick_lower;
     brick.ghost_bounds = brick.bounds;
+#if 0
     {
         const auto ghost_faces = compute_ghost_faces(brick_id, grid);
         for (size_t i = 0; i < 3; ++i) {
@@ -129,7 +104,7 @@ VolumeBrick load_volume_brick(json &config, const int mpi_rank, const int mpi_si
             }
         }
     }
-
+#endif
     brick.brick = cpp::Volume("structured_regular");
     brick.brick.setParam("dimensions", brick.full_dims);
     brick.brick.setParam("gridSpacing", spacing);
