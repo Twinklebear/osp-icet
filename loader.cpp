@@ -89,6 +89,9 @@ VolumeBrick load_volume_brick(json &config, const int mpi_rank, const int mpi_si
     brick.full_dims = brick.dims;
     vec3i brick_read_offset = brick_lower;
     brick.ghost_bounds = brick.bounds;
+    // Note: for this compositing benchmark we ignore the ghost zones
+    // and clipping stuff, since I'm seeing some odd stuff in the scivis renderer for
+    // the local rendering + IceT benchmark
 #if 0
     {
         const auto ghost_faces = compute_ghost_faces(brick_id, grid);

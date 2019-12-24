@@ -106,12 +106,6 @@ size_t IceTBackend::render(const cpp::Camera &cam, const cpp::World &w, const ve
                    [](const BrickInfo &b) { return b.owner; });
     icetCompositeOrder(process_order.data());
 
-    std::cout << "Compositing order: {";
-    for (const auto &p : process_order) {
-        std::cout << p << ", ";
-    }
-    std::cout << "}\n";
-
     const std::array<double, 16> identity_mat = {
         1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     const std::array<float, 4> icet_bgcolor = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -178,18 +172,6 @@ void IceTBackend::draw_callback(IceTImage &result)
     uint8_t *img = static_cast<uint8_t *>(fb.map(OSP_FB_COLOR));
     uint8_t *output = icetImageGetColorub(result);
     std::memcpy(output, img, img_size.x * img_size.y * 4);
-    /*
-    for (size_t i = 0; i < img_size.x * img_size.y; ++i) {
-        output[i * 4 + 3] = 128;
-    }
-    */
-
-    static int frame = 0;
-    const std::string debug_fname = "debug_icet_rank-" + std::to_string(mpi_rank) + "-f" +
-                                    std::to_string(frame++) + ".jpg";
-    std::cout << "fname: " << debug_fname << "\n";
-    stbi_write_jpg(debug_fname.c_str(), img_size.x, img_size.y, 4, img, 90);
-
     fb.unmap(img);
 }
 
