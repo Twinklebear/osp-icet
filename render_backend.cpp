@@ -13,6 +13,7 @@
 OSPRayDFBBackend::OSPRayDFBBackend(const vec2i &img_size)
     : fb(img_size, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_DEPTH), renderer("mpi_raycast")
 {
+    fb.setParam("timeCompositingOverhead", 1);
     fb.commit();
     renderer.setParam("volumeSamplingRate", 1.f);
     renderer.commit();
@@ -117,6 +118,26 @@ size_t IceTBackend::render(const cpp::Camera &cam, const cpp::World &w, const ve
     auto start = high_resolution_clock::now();
     icet_img = icetDrawFrame(identity_mat.data(), identity_mat.data(), icet_bgcolor.data());
     auto end = high_resolution_clock::now();
+
+    double local_composite_time = 0;
+    double local_render_time = 0;
+    icetGetDoublev(ICET_COMPOSITE_TIME, &local_composite_time);
+    icetGetDoublev(ICET_RENDER_TIME, &local_render_time);
+
+    // Compositing overhead is the time between the last local rendering
+    // completing and the compositing finishing, so the min time reported
+    // by IceT spent in compositing
+    double compositing_overhead = 0;
+    MPI_Reduce(&local_composite_time,
+               &compositing_overhead,
+               1,
+               MPI_DOUBLE,
+               MPI_MIN,
+               0,
+               MPI_COMM_WORLD);
+    if (mpi_rank == 0) {
+        std::cout << "IceT Compositing Overhead: " << compositing_overhead * 1000.f << "ms\n";
+    }
     return duration_cast<milliseconds>(end - start).count();
 }
 
