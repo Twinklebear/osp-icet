@@ -38,5 +38,5 @@ set_ospray_env_vars() {
 	export MPICH_MAX_THREAD_SAFETY=multiple
 }
 
-printenv
+set_ospray_env_vars
 
