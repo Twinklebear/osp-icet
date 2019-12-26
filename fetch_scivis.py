@@ -32,6 +32,10 @@ data = bytes(r.content)
 with open(sys.argv[1] + "_osp-icet.json", "w") as f:
     f.write(json.dumps(meta, indent=4))
 
-with open(os.path.basename(meta["url"]), "wb") as f:
-    f.write(data)
-
+if not os.path.isfile(meta["volume"]):
+    r = requests.get(meta["url"])
+    data = bytes(r.content)
+    with open(os.path.basename(meta["volume"]), "wb") as f:
+        f.write(data)
+else:
+    print("File {} already exists, not re-downloading".format(meta["volume"]))
