@@ -26,13 +26,12 @@ meta["image_size"] = [512, 512]
 
 print("Data set Information")
 print(json.dumps(meta, indent=4))
-r = requests.get(meta["url"])
-data = bytes(r.content)
 
 with open(sys.argv[1] + "_osp-icet.json", "w") as f:
     f.write(json.dumps(meta, indent=4))
 
 if not os.path.isfile(meta["volume"]):
+    print("Fetching volume from {}".format(meta["url"]))
     r = requests.get(meta["url"])
     data = bytes(r.content)
     with open(os.path.basename(meta["volume"]), "wb") as f:
