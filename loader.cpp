@@ -244,7 +244,7 @@ VolumeBrick load_volume_brick(json &config, const int mpi_rank, const int mpi_si
             }
             config["value_range"] = {global_value_range.x, global_value_range.y};
         } else {
-            config["value_range"] = {0, mpi_size};
+            config["value_range"] = {-1, mpi_size - 1};
         }
     }
 

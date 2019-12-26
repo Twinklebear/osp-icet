@@ -36,6 +36,8 @@ const std::string USAGE =
     "./osp_icet <config.json> [options]\n"
     "Options:\n"
     "  -prefix <name>       Provide a prefix to prepend to the image file names.\n"
+    "  -dfb                 Use OSPRay for rendering and compositing.\n"
+    "  -icet                Use OSPRay for local rendering only, and IceT for compositing.\n"
     "  -h                   Print this help.";
 
 void render_images(const std::vector<std::string> &args);
@@ -69,6 +71,8 @@ int main(int argc, char **argv)
             prefix = args[++i] + "-";
         } else if (args[i] == "-icet") {
             use_ospray_compositing = false;
+        } else if (args[i] == "-dfb") {
+            use_ospray_compositing = true;
         } else if (args[i] == "-h") {
             std::cout << USAGE << "\n";
             return 0;
