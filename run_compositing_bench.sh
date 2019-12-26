@@ -17,9 +17,10 @@ NPROCS="${SLURM_NNODES}${COBALT_PARTSIZE}"
 
 compositors=(dfb icet)
 for c in "${compositors[@]}"; do
-	export LOGFILE="bench_${c}_${NPROCS}n.txt"
-	export BENCH_ARGS="-$c ${JSON_CONFIG}"
+	export LOGFILE="bench-${c}-${NPROCS}n-${SLURM_JOB_PARTITION}-${JOBID}.txt"
+	export JOB_PREFIX="${SLURM_JOB_PARTITION}-${NPROCS}-${JOBID}"
 
-	ibrun ./osp_icet $BENCH_ARGS > $LOGFILE 2>&1
+	export BENCH_ARGS="-$c ${JSON_CONFIG}"
+	ibrun ./osp_icet -$c -prefix ${JOB_PREFIX} ${JSON_CONFIG} > ${LOGFILE} 2>&1
 done
 

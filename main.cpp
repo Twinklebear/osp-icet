@@ -31,6 +31,7 @@ box3f world_bounds;
 json config;
 std::string prefix;
 bool use_ospray_compositing = true;
+bool save_images = true;
 
 const std::string USAGE =
     "./osp_icet <config.json> [options]\n"
@@ -38,6 +39,7 @@ const std::string USAGE =
     "  -prefix <name>       Provide a prefix to prepend to the image file names.\n"
     "  -dfb                 Use OSPRay for rendering and compositing.\n"
     "  -icet                Use OSPRay for local rendering only, and IceT for compositing.\n"
+    "  -no-output           Don't save images of the rendered results.\n"
     "  -h                   Print this help.";
 
 void render_images(const std::vector<std::string> &args);
@@ -73,6 +75,8 @@ int main(int argc, char **argv)
             use_ospray_compositing = false;
         } else if (args[i] == "-dfb") {
             use_ospray_compositing = true;
+        } else if (args[i] == "-no-output") {
+            save_images = false;
         } else if (args[i] == "-h") {
             std::cout << USAGE << "\n";
             return 0;
@@ -177,13 +181,15 @@ void render_images(const std::vector<std::string> &args)
         if (mpi_rank == 0) {
             std::cout << "Frame " << i << " took " << render_time << "ms\n";
 
-            std::string fname = prefix + "osp-icet-";
-            std::sprintf(&fmt_out_buf[0], fmt_string.c_str(), static_cast<int>(i));
-            fname += fmt_out_buf + ".jpg";
+            if (save_images) {
+                std::string fname = prefix + "osp-icet-";
+                std::sprintf(&fmt_out_buf[0], fmt_string.c_str(), static_cast<int>(i));
+                fname += fmt_out_buf + ".jpg";
 
-            const uint32_t *img = backend->map_fb();
-            stbi_write_jpg(fname.c_str(), img_size.x, img_size.y, 4, img, 90);
-            backend->unmap_fb(img);
+                const uint32_t *img = backend->map_fb();
+                stbi_write_jpg(fname.c_str(), img_size.x, img_size.y, 4, img, 90);
+                backend->unmap_fb(img);
+            }
         }
     }
     if (mpi_rank == 0) {
