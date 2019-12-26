@@ -14,7 +14,8 @@ add_executable(osp_icet
     main.cpp
     util.cpp
     loader.cpp
-    render_backend.cpp)
+    render_backend.cpp
+    profiling.cpp)
 
 set_target_properties(osp_icet PROPERTIES
     CXX_STANDARD 14

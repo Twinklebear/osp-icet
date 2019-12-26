@@ -32,6 +32,7 @@ json config;
 std::string prefix;
 bool use_ospray_compositing = true;
 bool save_images = true;
+bool detailed_cpu_stats = false;
 
 const std::string USAGE =
     "./osp_icet <config.json> [options]\n"
@@ -40,6 +41,7 @@ const std::string USAGE =
     "  -dfb                 Use OSPRay for rendering and compositing.\n"
     "  -icet                Use OSPRay for local rendering only, and IceT for compositing.\n"
     "  -no-output           Don't save images of the rendered results.\n"
+    "  -detailed-stats      Record and print statistics about CPU use, thread pinning, etc.\n"
     "  -h                   Print this help.";
 
 void render_images(const std::vector<std::string> &args);
@@ -59,7 +61,6 @@ int main(int argc, char **argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
-    std::cout << "rank " << mpi_rank << "/" << mpi_size << "\n";
 
     const std::vector<std::string> args(argv, argv + argc);
     if (args.size() < 2) {
@@ -77,6 +78,8 @@ int main(int argc, char **argv)
             use_ospray_compositing = true;
         } else if (args[i] == "-no-output") {
             save_images = false;
+        } else if (args[i] == "-detailed-stats") {
+            detailed_cpu_stats = true;
         } else if (args[i] == "-h") {
             std::cout << USAGE << "\n";
             return 0;
@@ -85,6 +88,22 @@ int main(int argc, char **argv)
             cfg_file >> config;
         }
     }
+
+    char hostname[HOST_NAME_MAX + 1] = {0};
+    gethostname(hostname, HOST_NAME_MAX);
+    if (!detailed_cpu_stats) {
+        std::cout << "rank " << mpi_rank << "/" << mpi_size << " on " << hostname << "\n";
+    } else {
+        for (int i = 0; i < mpi_size; ++i) {
+            if (i == mpi_rank) {
+                std::cout << "rank " << mpi_rank << "/" << mpi_size << " on " << hostname
+                          << "\n"
+                          << get_file_content("/proc/self/status") << "\n=========\n";
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
+
     if (use_ospray_compositing) {
         prefix = prefix + "dfb-";
     } else {
@@ -139,9 +158,9 @@ void render_images(const std::vector<std::string> &args)
 
     std::shared_ptr<RenderBackend> backend;
     if (use_ospray_compositing) {
-        backend = std::make_shared<OSPRayDFBBackend>(img_size);
+        backend = std::make_shared<OSPRayDFBBackend>(img_size, detailed_cpu_stats);
     } else {
-        backend = std::make_shared<IceTBackend>(img_size, volume_dims);
+        backend = std::make_shared<IceTBackend>(img_size, volume_dims, detailed_cpu_stats);
     }
 
     cpp::VolumetricModel model(brick.brick);

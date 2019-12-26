@@ -10,6 +10,14 @@ using namespace ospray;
 using namespace ospcommon::math;
 
 struct RenderBackend {
+    vec2i img_size;
+    cpp::FrameBuffer fb;
+    bool report_cpu_stats;
+    int mpi_rank;
+    int mpi_size;
+
+    RenderBackend(const vec2i &img_size, bool detailed_cpu_stats);
+
     virtual ~RenderBackend() = default;
 
     // Render returns the total render time in milliseconds
@@ -23,10 +31,9 @@ struct RenderBackend {
 };
 
 struct OSPRayDFBBackend : RenderBackend {
-    cpp::FrameBuffer fb;
     cpp::Renderer renderer;
 
-    OSPRayDFBBackend(const vec2i &img_size);
+    OSPRayDFBBackend(const vec2i &img_size, bool detailed_cpu_stats);
 
     size_t render(const cpp::Camera &camera,
                   const cpp::World &world,
@@ -38,11 +45,7 @@ struct OSPRayDFBBackend : RenderBackend {
 };
 
 struct IceTBackend : RenderBackend {
-    vec2i img_size;
-    cpp::FrameBuffer fb;
     cpp::Renderer renderer;
-    int mpi_rank;
-    int mpi_size;
     IceTCommunicator icet_comm;
     IceTContext icet_context;
     IceTImage icet_img;
@@ -63,7 +66,7 @@ struct IceTBackend : RenderBackend {
 
     std::vector<BrickInfo> volume_bricks;
 
-    IceTBackend(const vec2i &img_size, const vec3i &volume_dims);
+    IceTBackend(const vec2i &img_size, const vec3i &volume_dims, bool detailed_cpu_stats);
 
     ~IceTBackend();
 

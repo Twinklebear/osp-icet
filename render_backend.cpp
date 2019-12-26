@@ -7,14 +7,25 @@
 #include <IceTMPI.h>
 #include <mpi.h>
 #include "loader.h"
+#include "profiling.h"
 #include "stb_image_write.h"
 #include "util.h"
 
-OSPRayDFBBackend::OSPRayDFBBackend(const vec2i &img_size)
-    : fb(img_size, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_DEPTH), renderer("mpi_raycast")
+RenderBackend::RenderBackend(const vec2i &size, bool detailed_cpu_stats)
+    : img_size(size),
+      fb(size, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_DEPTH),
+      report_cpu_stats(detailed_cpu_stats)
 {
     fb.setParam("timeCompositingOverhead", 1);
     fb.commit();
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+}
+
+OSPRayDFBBackend::OSPRayDFBBackend(const vec2i &img_size, bool detailed_cpu_stats)
+    : RenderBackend(img_size, detailed_cpu_stats), renderer("mpi_raycast")
+{
     renderer.setParam("volumeSamplingRate", 1.f);
     renderer.commit();
 }
@@ -24,10 +35,14 @@ size_t OSPRayDFBBackend::render(const cpp::Camera &camera,
                                 const vec3f &cam_pos)
 {
     using namespace std::chrono;
-    auto start = high_resolution_clock::now();
+    ProfilingPoint start;
     fb.renderFrame(renderer, camera, world);
-    auto end = high_resolution_clock::now();
-    return duration_cast<milliseconds>(end - start).count();
+    ProfilingPoint end;
+    if (report_cpu_stats) {
+        std::cout << "rank " << mpi_rank << ", CPU: " << cpu_utilization(start, end) << "%\n";
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    return elapsed_time_ms(start, end);
 }
 
 const uint32_t *OSPRayDFBBackend::map_fb()
@@ -49,9 +64,10 @@ IceTBackend::BrickInfo::BrickInfo(const vec3i &pos, const vec3i &dims, int owner
 // annoying global state
 static IceTBackend *icet_backend = nullptr;
 
-IceTBackend::IceTBackend(const vec2i &img_dims, const vec3i &volume_dims)
-    : img_size(img_dims),
-      fb(img_dims, OSP_FB_RGBA8, OSP_FB_COLOR | OSP_FB_DEPTH),
+IceTBackend::IceTBackend(const vec2i &img_dims,
+                         const vec3i &volume_dims,
+                         bool detailed_cpu_stats)
+    : RenderBackend(img_size, detailed_cpu_stats),
       renderer("scivis"),
       icet_comm(icetCreateMPICommunicator(MPI_COMM_WORLD)),
       icet_context(icetCreateContext(icet_comm)),
@@ -76,8 +92,6 @@ IceTBackend::IceTBackend(const vec2i &img_dims, const vec3i &volume_dims)
 
     icetDrawCallback(icet_draw_callback);
 
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     compute_brick_grid(volume_dims);
 }
 
@@ -115,9 +129,9 @@ size_t IceTBackend::render(const cpp::Camera &cam, const cpp::World &w, const ve
     world = &w;
     camera = &cam;
 
-    auto start = high_resolution_clock::now();
+    ProfilingPoint start;
     icet_img = icetDrawFrame(identity_mat.data(), identity_mat.data(), icet_bgcolor.data());
-    auto end = high_resolution_clock::now();
+    ProfilingPoint end;
 
     double local_composite_time = 0;
     double local_render_time = 0;
@@ -138,7 +152,11 @@ size_t IceTBackend::render(const cpp::Camera &cam, const cpp::World &w, const ve
     if (mpi_rank == 0) {
         std::cout << "IceT Compositing Overhead: " << compositing_overhead * 1000.f << "ms\n";
     }
-    return duration_cast<milliseconds>(end - start).count();
+    if (report_cpu_stats) {
+        std::cout << "rank " << mpi_rank << ", CPU: " << cpu_utilization(start, end) << "%\n";
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    return elapsed_time_ms(start, end);
 }
 
 const uint32_t *IceTBackend::map_fb()
