@@ -23,8 +23,8 @@ RenderBackend::RenderBackend(const vec2i &size, bool detailed_cpu_stats)
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 }
 
-OSPRayDFBBackend::OSPRayDFBBackend(const vec2i &img_size, bool detailed_cpu_stats)
-    : RenderBackend(img_size, detailed_cpu_stats), renderer("mpi_raycast")
+OSPRayDFBBackend::OSPRayDFBBackend(const vec2i &img_dims, bool detailed_cpu_stats)
+    : RenderBackend(img_dims, detailed_cpu_stats), renderer("mpi_raycast")
 {
     renderer.setParam("volumeSamplingRate", 1.f);
     renderer.commit();
@@ -67,13 +67,12 @@ static IceTBackend *icet_backend = nullptr;
 IceTBackend::IceTBackend(const vec2i &img_dims,
                          const vec3i &volume_dims,
                          bool detailed_cpu_stats)
-    : RenderBackend(img_size, detailed_cpu_stats),
+    : RenderBackend(img_dims, detailed_cpu_stats),
       renderer("scivis"),
       icet_comm(icetCreateMPICommunicator(MPI_COMM_WORLD)),
       icet_context(icetCreateContext(icet_comm)),
       icet_img(icetImageNull())
 {
-    fb.commit();
     renderer.setParam("volumeSamplingRate", 1.f);
     renderer.setParam("bgColor", vec4f(0.f));
     renderer.commit();
