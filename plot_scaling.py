@@ -61,7 +61,8 @@ Usage:
     plot_scaling.py <var> <title> <file>... [options]
 
 Options:
-    -o OUTPUT              save the plot to an output file
+    -o OUTPUT           Save the plot to an output file
+    --yerr               Display std-dev as error bars     
 """
 args = docopt(doc)
 
@@ -101,15 +102,22 @@ if args["-o"] and os.path.splitext(args["-o"])[1] == ".pdf":
 fig, ax = plt.subplots()
 
 plot_var = args["<var>"]
+show_error = args["--yerr"]
 
 ax.set_xscale("log", basex=2, nonposx="clip")
 #ax.set_yscale("log", basey=2, nonposy="clip")
 
 x, y, yerr = scaling_run.get_results("dfb", plot_var)
-plt.plot(x, y, label="DFB")
+if not show_error:
+    plt.plot(x, y, label="DFB")
+else:
+    plt.errorbar(x, y, yerr=yerr, label="DFB")
 
 x, y, yerr = scaling_run.get_results("icet", plot_var)
-plt.plot(x, y, label="IceT")
+if not show_error:
+    plt.plot(x, y, label="IceT")
+else:
+    plt.errorbar(x, y, yerr=yerr, label="IceT")
 
 plt.title(args["<title>"])
 plt.legend()
