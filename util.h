@@ -21,6 +21,8 @@ std::string get_file_basepath(const std::string &path);
 
 bool starts_with(const std::string &str, const std::string &prefix);
 
+std::string get_mpi_error(const int error_code);
+
 std::vector<vec3f> generate_fibonacci_sphere(const size_t n_points, const float radius);
 
 // Hue: [0, 360], sat & val: [0, 1]
