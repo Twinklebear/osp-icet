@@ -93,19 +93,18 @@ int main(int argc, char **argv)
         }
     }
 
-    char hostname[HOST_NAME_MAX + 1] = {0};
-    gethostname(hostname, HOST_NAME_MAX);
-    if (!detailed_cpu_stats) {
-        std::cout << "rank " << mpi_rank << "/" << mpi_size << " on " << hostname << "\n";
-    } else {
+    if (detailed_cpu_stats) {
+        char hostname[HOST_NAME_MAX + 1] = {0};
+        gethostname(hostname, HOST_NAME_MAX);
         for (int i = 0; i < mpi_size; ++i) {
             if (i == mpi_rank) {
                 std::cout << "rank " << mpi_rank << "/" << mpi_size << " on " << hostname
                           << "\n"
-                          << get_file_content("/proc/self/status") << "\n=========\n";
+                          << get_file_content("/proc/self/status") << "\n=========\n"
+                          << std::flush;
             }
-            MPI_Barrier(MPI_COMM_WORLD);
         }
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 
     if (use_ospray_compositing) {
@@ -115,13 +114,14 @@ int main(int argc, char **argv)
     }
 
     if (mpi_rank == 0) {
-        std::cout << "Rendering Config:\n" << config.dump(4) << "\n";
+        std::cout << "Rendering Config: " << config.dump() << "\n" << std::flush;
         if (use_ospray_compositing) {
             std::cout << "Using OSPRay's DFB for compositing\n";
         } else {
             std::cout << "Using IceT for compositing\n";
         }
     }
+    MPI_Barrier(MPI_COMM_WORLD);
 
     {
         if (use_ospray_compositing) {

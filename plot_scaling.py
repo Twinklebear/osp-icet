@@ -3,6 +3,7 @@
 import os
 import sys
 import re
+import json
 import matplotlib
 import numpy as np
 import scipy
@@ -67,10 +68,11 @@ Options:
 args = docopt(doc)
 
 parse_log_fname = re.compile(".*bench-(\w+)-(\d+)n-([^0-9]+)-(\d+)\.txt")
+match_config = re.compile("Rendering Config: (.*)")
 match_compositing_overhead = re.compile("(\w+) Compositing Overhead: (\d+\.?\d*)ms")
 match_frame_time = re.compile("Frame (\d+) took (\d+)ms")
 
-scaling_run = ScalingRun("1024x1024")
+scaling_runs = {}
 for filename in args["<file>"]:
     m_config = parse_log_fname.match(filename)
     if not m_config:
@@ -80,7 +82,12 @@ for filename in args["<file>"]:
     print(m_config.groups())
     with open(filename, "r") as f:
         run = BenchmarkRun(m_config.group(1), int(m_config.group(2)))
+        config = None
         for l in f:
+            m = match_config.match(l)
+            if m:
+                config = json.loads(m.group(1))
+                continue
             m = match_compositing_overhead.search(l)
             if m:
                 run.compositing_overhead.append(float(m.group(2)))
@@ -89,9 +96,16 @@ for filename in args["<file>"]:
             if m:
                 run.frame_times.append(float(m.group(2)))
                 continue
-        scaling_run.add_run(run)
+        if not config:
+            print("[error]: Did not find config line for this run!")
+        else:
+            img_str = "{}x{}".format(config["image_size"][0], config["image_size"][1])
+            if not img_str in scaling_runs:
+                scaling_runs[img_str] = ScalingRun(img_str)
+            scaling_runs[img_str].add_run(run)
 
-scaling_run.sort()
+for img_str, sr in scaling_runs.items():
+    sr.sort()
 
 if args["-o"] and os.path.splitext(args["-o"])[1] == ".pdf":
     #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
@@ -107,17 +121,21 @@ show_error = args["--yerr"]
 ax.set_xscale("log", basex=2, nonposx="clip")
 #ax.set_yscale("log", basey=2, nonposy="clip")
 
-x, y, yerr = scaling_run.get_results("dfb", plot_var)
-if not show_error:
-    plt.plot(x, y, label="DFB")
-else:
-    plt.errorbar(x, y, yerr=yerr, label="DFB")
+for img_str, sr in scaling_runs.items():
+    dfb_label = "DFB {}".format(img_str)
+    icet_label = "IceT {}".format(img_str)
 
-x, y, yerr = scaling_run.get_results("icet", plot_var)
-if not show_error:
-    plt.plot(x, y, label="IceT")
-else:
-    plt.errorbar(x, y, yerr=yerr, label="IceT")
+    x, y, yerr = sr.get_results("dfb", plot_var)
+    if not show_error:
+        plt.plot(x, y, label=dfb_label)
+    else:
+        plt.errorbar(x, y, yerr=yerr, label=dfb_label)
+
+    x, y, yerr = sr.get_results("icet", plot_var)
+    if not show_error:
+        plt.plot(x, y, label=icet_label)
+    else:
+        plt.errorbar(x, y, yerr=yerr, label=icet_label)
 
 plt.title(args["<title>"])
 plt.legend()
