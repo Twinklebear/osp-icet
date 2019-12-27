@@ -20,6 +20,11 @@ for c in "${compositors[@]}"; do
 	export LOGFILE="bench-${c}-${NPROCS}n-${SLURM_JOB_PARTITION}-${JOBID}.txt"
 	export JOB_PREFIX="${SLURM_JOB_PARTITION}-${NPROCS}-${JOBID}"
 
-	ibrun ./osp_icet -$c -prefix ${JOB_PREFIX} ${JSON_CONFIG} -no-output > ${LOGFILE} 2>&1
+	ibrun ./osp_icet \
+        -$c \
+        -prefix ${JOB_PREFIX} \
+        ${JSON_CONFIG} \
+        -no-output \
+        -detailed-stats > ${LOGFILE} 2>&1
 done
 
