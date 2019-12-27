@@ -85,6 +85,10 @@ int main(int argc, char **argv)
             return 0;
         } else {
             std::ifstream cfg_file(args[i].c_str());
+            if (!cfg_file) {
+                std::cerr << "[error] Failed to open config file " << args[i] << "\n";
+                return 1;
+            }
             cfg_file >> config;
         }
     }
