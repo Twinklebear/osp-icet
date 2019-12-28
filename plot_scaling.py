@@ -143,6 +143,7 @@ plt.legend()
 ax.spines["right"].set_visible(False)
 ax.spines["top"].set_visible(False)
 ax.yaxis.set_ticks_position("left")
+ax.set_ylim(bottom=0)
 ax.xaxis.set_ticks_position("bottom")
 ax.xaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
 

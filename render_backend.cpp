@@ -161,8 +161,8 @@ size_t IceTBackend::render(const cpp::Camera &cam, const cpp::World &w, const ve
     if (mpi_rank == 0) {
         std::cout << "IceT Compositing Overhead: " << compositing_overhead * 1000.f << "ms\n"
                   << "IceT Strategy: " << icetGetStrategyName()
-                  << "\nIceT Single Image Strategy: "
-                  << icetGetSingleImageStrategyName() << "\n";
+                  << "\nIceT Single Image Strategy: " << icetGetSingleImageStrategyName()
+                  << "\n";
     }
     if (report_cpu_stats) {
         std::cout << "rank " << mpi_rank << ", CPU: " << cpu_utilization(start, end) << "%\n";
@@ -234,4 +234,3 @@ void IceTBackend::icet_draw_callback(const double *proj_mat,
 {
     icet_backend->draw_callback(result);
 }
-

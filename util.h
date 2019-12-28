@@ -61,4 +61,3 @@ vec2f compute_value_range(const T *vals, size_t n_vals)
                                         [](const T &a, const T &b) { return std::max(a, b); });
     return vec2f(min_val, max_val);
 }
-

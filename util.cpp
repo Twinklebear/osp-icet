@@ -112,4 +112,3 @@ vec3f hsv_to_rgb(const float hue, const float sat, const float val)
     const float m = val - c;
     return rgb + vec3f(m, m, m);
 }
-
