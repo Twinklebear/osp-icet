@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <mpi.h>
+#include <stdlib.h>
 
 std::string get_file_content(const std::string &fname)
 {
@@ -42,6 +43,15 @@ std::string get_file_basepath(const std::string &path)
         return path;
     }
     return path.substr(0, end);
+}
+
+std::string get_env(const std::string &var)
+{
+    const char *env_var = getenv(var.c_str());
+    if (!env_var) {
+        return "";
+    }
+    return std::string(env_var);
 }
 
 bool starts_with(const std::string &str, const std::string &prefix)

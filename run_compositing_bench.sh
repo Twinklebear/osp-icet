@@ -19,12 +19,15 @@ compositors=(dfb icet)
 for c in "${compositors[@]}"; do
 	export LOGFILE="bench-${c}-${NPROCS}n-${SLURM_JOB_PARTITION}-${JOBID}.txt"
 	export JOB_PREFIX="${SLURM_JOB_PARTITION}-${NPROCS}-${JOBID}"
+    if [ -n "$LOG_PREFIX" ]; then
+        export LOGFILE="${LOG_PREFIX}-${LOGFILE}"
+        export JOB_PREFIX="${LOG_PREFIX}-${JOB_PREFIX}"
+    fi
 
 	ibrun ./osp_icet \
         -$c \
         -prefix ${JOB_PREFIX} \
         ${JSON_CONFIG} \
-        -no-output \
-        -detailed-stats > ${LOGFILE} 2>&1
+        -no-output > ${LOGFILE} 2>&1
 done
 

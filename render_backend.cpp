@@ -77,8 +77,19 @@ IceTBackend::IceTBackend(const vec2i &img_dims,
     renderer.setParam("bgColor", vec4f(0.f));
     renderer.commit();
 
-    // Setup IceT for alpha-blending compositing
-    icetSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_AUTOMATIC);
+    // Setup IceT for single-image alpha-blended ordered compositing
+    icetStrategy(ICET_STRATEGY_SEQUENTIAL);
+    const std::string icet_strategy = get_env("OSP_ICET_STRATEGY");
+    if (icet_strategy.empty()) {
+        icetSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_AUTOMATIC);
+    } else if (icet_strategy == "BSWAP") {
+        icetSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_BSWAP);
+    } else if (icet_strategy == "RADIXK") {
+        icetSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_RADIXK);
+    } else if (icet_strategy == "TREE") {
+        icetSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_TREE);
+    }
+
     icetEnable(ICET_ORDERED_COMPOSITE);
     icetEnable(ICET_CORRECT_COLORED_BACKGROUND);
     icetCompositeMode(ICET_COMPOSITE_MODE_BLEND);
@@ -87,7 +98,6 @@ IceTBackend::IceTBackend(const vec2i &img_dims,
 
     icetResetTiles();
     icetAddTile(0, 0, img_size.x, img_size.y, 0);
-    icetStrategy(ICET_STRATEGY_REDUCE);
 
     icetDrawCallback(icet_draw_callback);
 
@@ -149,7 +159,10 @@ size_t IceTBackend::render(const cpp::Camera &cam, const cpp::World &w, const ve
                0,
                MPI_COMM_WORLD);
     if (mpi_rank == 0) {
-        std::cout << "IceT Compositing Overhead: " << compositing_overhead * 1000.f << "ms\n";
+        std::cout << "IceT Compositing Overhead: " << compositing_overhead * 1000.f << "ms\n"
+                  << "IceT Strategy: " << icetGetStrategyName()
+                  << "\nIceT Single Image Strategy: "
+                  << icetGetSingleImageStrategyName() << "\n";
     }
     if (report_cpu_stats) {
         std::cout << "rank " << mpi_rank << ", CPU: " << cpu_utilization(start, end) << "%\n";

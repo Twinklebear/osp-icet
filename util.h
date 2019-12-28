@@ -19,6 +19,8 @@ std::string get_file_basename(const std::string &path);
 
 std::string get_file_basepath(const std::string &path);
 
+std::string get_env(const std::string &var);
+
 bool starts_with(const std::string &str, const std::string &prefix);
 
 std::string get_mpi_error(const int error_code);
