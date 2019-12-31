@@ -222,17 +222,17 @@ VolumeBrick load_volume_brick(json &config, const int mpi_rank, const int mpi_si
     }
 
     cpp::Data osp_data;
-    if (voxel_type == "uint8") {
+    if (voxel_type_string == "uint8") {
         osp_data = cpp::Data(vec3ul(brick.full_dims), brick.voxel_data->data(), true);
-    } else if (voxel_type == "uint16") {
+    } else if (voxel_type_string == "uint16") {
         osp_data = cpp::Data(vec3ul(brick.full_dims),
                              reinterpret_cast<uint16_t *>(brick.voxel_data->data()),
                              true);
-    } else if (voxel_type == "float32") {
+    } else if (voxel_type_string == "float32") {
         osp_data = cpp::Data(vec3ul(brick.full_dims),
                              reinterpret_cast<float *>(brick.voxel_data->data()),
                              true);
-    } else if (voxel_type == "float64") {
+    } else if (voxel_type_string == "float64") {
         osp_data = cpp::Data(vec3ul(brick.full_dims),
                              reinterpret_cast<double *>(brick.voxel_data->data()),
                              true);
