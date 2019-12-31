@@ -97,9 +97,11 @@ for filename in args["<file>"]:
                 run.frame_times.append(float(m.group(2)))
                 continue
         if not config:
-            print("[error]: Did not find config line for this run!")
+            print("[error]: Did not find config line for {}!".format(filename))
         else:
             img_str = "{}x{}".format(config["image_size"][0], config["image_size"][1])
+            if img_str == "4096x4096":
+                continue
             if not img_str in scaling_runs:
                 scaling_runs[img_str] = ScalingRun(img_str)
             scaling_runs[img_str].add_run(run)
@@ -127,15 +129,15 @@ for img_str, sr in scaling_runs.items():
 
     x, y, yerr = sr.get_results("dfb", plot_var)
     if not show_error:
-        plt.plot(x, y, label=dfb_label)
+        plt.plot(x, y, label=dfb_label, linewidth=2)
     else:
-        plt.errorbar(x, y, yerr=yerr, label=dfb_label)
+        plt.errorbar(x, y, yerr=yerr, label=dfb_label, linewidth=2)
 
     x, y, yerr = sr.get_results("icet", plot_var)
     if not show_error:
-        plt.plot(x, y, label=icet_label)
+        plt.plot(x, y, label=icet_label, linewidth=2)
     else:
-        plt.errorbar(x, y, yerr=yerr, label=icet_label)
+        plt.errorbar(x, y, yerr=yerr, label=icet_label, linewidth=2)
 
 plt.title(args["<title>"])
 plt.legend()
@@ -146,6 +148,9 @@ ax.yaxis.set_ticks_position("left")
 ax.set_ylim(bottom=0)
 ax.xaxis.set_ticks_position("bottom")
 ax.xaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter("%d"))
+
+ax.set_ylabel("Time (ms)")
+ax.set_xlabel("Nodes")
 
 if args["-o"]:
     if os.path.splitext(args["-o"])[1] == ".png":
