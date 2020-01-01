@@ -15,8 +15,9 @@ struct RenderBackend {
     bool report_cpu_stats;
     int mpi_rank;
     int mpi_size;
+    vec3f bg_color;
 
-    RenderBackend(const vec2i &img_size, bool detailed_cpu_stats);
+    RenderBackend(const vec2i &img_size, bool detailed_cpu_stats, const vec3f &bg_color);
 
     virtual ~RenderBackend() = default;
 
@@ -33,7 +34,7 @@ struct RenderBackend {
 struct OSPRayDFBBackend : RenderBackend {
     cpp::Renderer renderer;
 
-    OSPRayDFBBackend(const vec2i &img_size, bool detailed_cpu_stats);
+    OSPRayDFBBackend(const vec2i &img_size, bool detailed_cpu_stats, const vec3f &bg_color);
 
     size_t render(const cpp::Camera &camera,
                   const cpp::World &world,
@@ -66,7 +67,10 @@ struct IceTBackend : RenderBackend {
 
     std::vector<BrickInfo> volume_bricks;
 
-    IceTBackend(const vec2i &img_size, const vec3i &volume_dims, bool detailed_cpu_stats);
+    IceTBackend(const vec2i &img_size,
+                const vec3i &volume_dims,
+                bool detailed_cpu_stats,
+                const vec3f &bg_color);
 
     ~IceTBackend();
 

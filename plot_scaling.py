@@ -100,8 +100,8 @@ for filename in args["<file>"]:
             print("[error]: Did not find config line for {}!".format(filename))
         else:
             img_str = "{}x{}".format(config["image_size"][0], config["image_size"][1])
-            if img_str == "4096x4096":
-                continue
+            #if img_str == "4096x4096":
+            #    continue
             if not img_str in scaling_runs:
                 scaling_runs[img_str] = ScalingRun(img_str)
             scaling_runs[img_str].add_run(run)

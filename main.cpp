@@ -159,12 +159,17 @@ void render_images(const std::vector<std::string> &args)
     const vec2i img_size = get_vec<int, 2>(config["image_size"]);
     const auto colormap = load_colormap(config["colormap"].get<std::string>(), value_range);
     const auto camera_set = load_cameras(config["camera"].get<json>(), world_bounds);
+    vec3f bg_color(0.f);
+    if (config.find("bg_color") != config.end()) {
+        bg_color = get_vec<float, 3>(config["bg_color"]);
+    }
 
     std::shared_ptr<RenderBackend> backend;
     if (use_ospray_compositing) {
-        backend = std::make_shared<OSPRayDFBBackend>(img_size, detailed_cpu_stats);
+        backend = std::make_shared<OSPRayDFBBackend>(img_size, detailed_cpu_stats, bg_color);
     } else {
-        backend = std::make_shared<IceTBackend>(img_size, volume_dims, detailed_cpu_stats);
+        backend =
+            std::make_shared<IceTBackend>(img_size, volume_dims, detailed_cpu_stats, bg_color);
     }
 
     cpp::VolumetricModel model(brick.brick);

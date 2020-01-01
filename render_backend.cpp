@@ -11,10 +11,11 @@
 #include "stb_image_write.h"
 #include "util.h"
 
-RenderBackend::RenderBackend(const vec2i &size, bool detailed_cpu_stats)
+RenderBackend::RenderBackend(const vec2i &size, bool detailed_cpu_stats, const vec3f &bg_color)
     : img_size(size),
       fb(size, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_DEPTH),
-      report_cpu_stats(detailed_cpu_stats)
+      report_cpu_stats(detailed_cpu_stats),
+      bg_color(bg_color)
 {
     fb.setParam("timeCompositingOverhead", 1);
     fb.commit();
@@ -23,10 +24,13 @@ RenderBackend::RenderBackend(const vec2i &size, bool detailed_cpu_stats)
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 }
 
-OSPRayDFBBackend::OSPRayDFBBackend(const vec2i &img_dims, bool detailed_cpu_stats)
-    : RenderBackend(img_dims, detailed_cpu_stats), renderer("mpi_raycast")
+OSPRayDFBBackend::OSPRayDFBBackend(const vec2i &img_dims,
+                                   bool detailed_cpu_stats,
+                                   const vec3f &bg_color)
+    : RenderBackend(img_dims, detailed_cpu_stats, bg_color), renderer("mpi_raycast")
 {
     renderer.setParam("volumeSamplingRate", 1.f);
+    renderer.setParam("bgColor", bg_color);
     renderer.commit();
 }
 
@@ -66,8 +70,9 @@ static IceTBackend *icet_backend = nullptr;
 
 IceTBackend::IceTBackend(const vec2i &img_dims,
                          const vec3i &volume_dims,
-                         bool detailed_cpu_stats)
-    : RenderBackend(img_dims, detailed_cpu_stats),
+                         bool detailed_cpu_stats,
+                         const vec3f &bg_color)
+    : RenderBackend(img_dims, detailed_cpu_stats, bg_color),
       renderer("scivis"),
       icet_comm(icetCreateMPICommunicator(MPI_COMM_WORLD)),
       icet_context(icetCreateContext(icet_comm)),
@@ -132,7 +137,7 @@ size_t IceTBackend::render(const cpp::Camera &cam, const cpp::World &w, const ve
 
     const std::array<double, 16> identity_mat = {
         1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
-    const std::array<float, 4> icet_bgcolor = {0.0f, 0.0f, 0.0f, 0.0f};
+    const std::array<float, 4> icet_bgcolor = {bg_color.x, bg_color.y, bg_color.z, 1.f};
 
     icet_backend = this;
     world = &w;
