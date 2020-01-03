@@ -46,11 +46,11 @@ class ScalingRun:
         for run in data:
             x.append(run.node_count)
             if var == "total":
-                y.append(np.mean(run.frame_times))
-                yerr.append(np.std(run.frame_times))
+                y.append(np.mean(run.frame_times[10:]))
+                yerr.append(np.std(run.frame_times[10:]))
             elif var == "compositing":
-                y.append(np.mean(run.compositing_overhead))
-                yerr.append(np.std(run.compositing_overhead))
+                y.append(np.mean(run.compositing_overhead[10:]))
+                yerr.append(np.std(run.compositing_overhead[10:]))
             else:
                 print("Unrecognized data var {}".format(var))
         return x, y, yerr
@@ -115,6 +115,8 @@ if args["-o"] and os.path.splitext(args["-o"])[1] == ".pdf":
     rc('font',**{'family':'serif','serif':['Palatino']})
     rc('text', usetex=True)
 
+#rc('figure', figsize=(6, 3.6))
+
 fig, ax = plt.subplots()
 
 plot_var = args["<var>"]
@@ -123,21 +125,29 @@ show_error = args["--yerr"]
 ax.set_xscale("log", basex=2, nonposx="clip")
 #ax.set_yscale("log", basey=2, nonposy="clip")
 
+colors = cm.get_cmap("tab20c", 20)
+next_color = 0
+
 for img_str, sr in scaling_runs.items():
     dfb_label = "DFB {}".format(img_str)
     icet_label = "IceT {}".format(img_str)
 
+    dfb_color = colors(next_color)
+    next_color = next_color + 1.0 / 5.0
+    icet_color = colors(next_color)
+    next_color = next_color + 1.0 / 5.0
+
     x, y, yerr = sr.get_results("dfb", plot_var)
     if not show_error:
-        plt.plot(x, y, label=dfb_label, linewidth=2)
+        plt.plot(x, y, label=dfb_label, linewidth=2, color=dfb_color)
     else:
-        plt.errorbar(x, y, yerr=yerr, label=dfb_label, linewidth=2)
+        plt.errorbar(x, y, yerr=yerr, label=dfb_label, linewidth=2, color=dfb_color)
 
     x, y, yerr = sr.get_results("icet", plot_var)
     if not show_error:
-        plt.plot(x, y, label=icet_label, linewidth=2)
+        plt.plot(x, y, label=icet_label, linewidth=2, color=icet_color)
     else:
-        plt.errorbar(x, y, yerr=yerr, label=icet_label, linewidth=2)
+        plt.errorbar(x, y, yerr=yerr, label=icet_label, linewidth=2, color=icet_color)
 
 plt.title(args["<title>"])
 plt.legend()
