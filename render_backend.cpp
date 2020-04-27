@@ -27,7 +27,7 @@ RenderBackend::RenderBackend(const vec2i &size, bool detailed_cpu_stats, const v
 OSPRayDFBBackend::OSPRayDFBBackend(const vec2i &img_dims,
                                    bool detailed_cpu_stats,
                                    const vec3f &bg_color)
-    : RenderBackend(img_dims, detailed_cpu_stats, bg_color), renderer("mpi_raycast")
+    : RenderBackend(img_dims, detailed_cpu_stats, bg_color), renderer("mpiRaycast")
 {
     renderer.setParam("volumeSamplingRate", 1.f);
     renderer.setParam("bgColor", bg_color);

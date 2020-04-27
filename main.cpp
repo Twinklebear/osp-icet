@@ -126,7 +126,7 @@ int main(int argc, char **argv)
     {
         if (use_ospray_compositing) {
             ospLoadModule("mpi");
-            cpp::Device device("mpi_distributed");
+            cpp::Device device("mpiDistributed");
             device.commit();
             device.setCurrent();
         } else {

@@ -114,7 +114,7 @@ VolumeBrick load_volume_brick(json &config, const int mpi_rank, const int mpi_si
         }
     }
 #endif
-    brick.brick = cpp::Volume("structured_regular");
+    brick.brick = cpp::Volume("structuredRegular");
     brick.brick.setParam("dimensions", brick.full_dims);
     brick.brick.setParam("gridSpacing", spacing);
 
@@ -307,7 +307,7 @@ std::vector<Camera> load_cameras(const json &c, const box3f &world_bounds)
 
 cpp::TransferFunction load_colormap(const std::string &f, const vec2f &value_range)
 {
-    cpp::TransferFunction tfn("piecewise_linear");
+    cpp::TransferFunction tfn("piecewiseLinear");
     int x, y, n;
     uint8_t *data = stbi_load(f.c_str(), &x, &y, &n, 4);
     if (!data) {
