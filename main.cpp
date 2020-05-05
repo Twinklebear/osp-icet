@@ -187,7 +187,7 @@ void render_images(const std::vector<std::string> &args)
 
     cpp::World world;
     world.setParam("instance", cpp::Data(instance));
-    world.setParam("regions", cpp::Data(brick.bounds));
+    world.setParam("region", cpp::Data(brick.bounds));
     world.commit();
 
     if (mpi_rank == 0) {
