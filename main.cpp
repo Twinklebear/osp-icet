@@ -94,8 +94,8 @@ int main(int argc, char **argv)
     }
 
     if (detailed_cpu_stats) {
-        char hostname[HOST_NAME_MAX + 1] = {0};
-        gethostname(hostname, HOST_NAME_MAX);
+        char hostname[1024] = {0};
+        gethostname(hostname, 1023);
         for (int i = 0; i < mpi_size; ++i) {
             if (i == mpi_rank) {
                 std::cout << "rank " << mpi_rank << "/" << mpi_size << " on " << hostname
