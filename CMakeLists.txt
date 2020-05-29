@@ -26,7 +26,7 @@ target_include_directories(osp_icet PUBLIC
 
 target_link_libraries(osp_icet PUBLIC
     ospray::ospray
-    ospcommon::ospcommon
+    rkcommon::rkcommon
     MPI::MPI_CXX
     TBB::tbb
 	${ICET_CORE_LIBS}

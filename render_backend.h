@@ -7,7 +7,7 @@
 
 using json = nlohmann::json;
 using namespace ospray;
-using namespace ospcommon::math;
+using namespace rkcommon::math;
 
 struct RenderBackend {
     vec2i img_size;
