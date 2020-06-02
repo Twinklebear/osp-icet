@@ -39,7 +39,9 @@ const std::string USAGE =
     "Options:\n"
     "  -prefix <name>       Provide a prefix to prepend to the image file names.\n"
     "  -dfb                 Use OSPRay for rendering and compositing.\n"
+#if ICET_ENABLED
     "  -icet                Use OSPRay for local rendering only, and IceT for compositing.\n"
+#endif
     "  -no-output           Don't save images of the rendered results.\n"
     "  -detailed-stats      Record and print statistics about CPU use, thread pinning, etc.\n"
     "  -h                   Print this help.";
@@ -72,8 +74,10 @@ int main(int argc, char **argv)
     for (size_t i = 1; i < args.size(); ++i) {
         if (args[i] == "-prefix") {
             prefix = args[++i] + "-";
+#if ICET_ENABLED
         } else if (args[i] == "-icet") {
             use_ospray_compositing = false;
+#endif
         } else if (args[i] == "-dfb") {
             use_ospray_compositing = true;
         } else if (args[i] == "-no-output") {
@@ -168,8 +172,13 @@ void render_images(const std::vector<std::string> &args)
     if (use_ospray_compositing) {
         backend = std::make_shared<OSPRayDFBBackend>(img_size, detailed_cpu_stats, bg_color);
     } else {
+#if ICET_ENABLED
         backend =
             std::make_shared<IceTBackend>(img_size, volume_dims, detailed_cpu_stats, bg_color);
+#else
+        std::cout << "ERROR: IceT support must be compiled in to compare with IceT compositing\n";
+        std::exit(1);
+#endif
     }
 
     cpp::VolumetricModel model(brick.brick);

@@ -1,7 +1,9 @@
 #pragma once
 
+#if ICET_ENABLED
 #include <IceT.h>
 #include <IceTMPI.h>
+#endif
 #include <ospray/ospray_cpp.h>
 #include "json.hpp"
 
@@ -45,6 +47,7 @@ struct OSPRayDFBBackend : RenderBackend {
     void unmap_fb(const uint32_t *mapping) override;
 };
 
+#if ICET_ENABLED
 struct IceTBackend : RenderBackend {
     cpp::Renderer renderer;
     IceTCommunicator icet_comm;
@@ -95,4 +98,4 @@ private:
                                    const int *readback_viewport,
                                    IceTImage result);
 };
-
+#endif

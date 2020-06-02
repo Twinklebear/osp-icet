@@ -3,8 +3,10 @@
 #include <chrono>
 #include <limits>
 #include <vector>
+#if ICET_ENABLED
 #include <IceT.h>
 #include <IceTMPI.h>
+#endif
 #include <mpi.h>
 #include "loader.h"
 #include "profiling.h"
@@ -59,6 +61,7 @@ void OSPRayDFBBackend::unmap_fb(const uint32_t *mapping)
     fb.unmap(const_cast<uint32_t *>(mapping));
 }
 
+#if ICET_ENABLED
 IceTBackend::BrickInfo::BrickInfo(const vec3i &pos, const vec3i &dims, int owner)
     : pos(pos), dims(dims), owner(owner)
 {
@@ -239,3 +242,4 @@ void IceTBackend::icet_draw_callback(const double *proj_mat,
 {
     icet_backend->draw_callback(result);
 }
+#endif

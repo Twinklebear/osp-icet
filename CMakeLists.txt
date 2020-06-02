@@ -6,7 +6,10 @@ if (NOT WIN32)
 endif()
 
 find_package(ospray 2.0 REQUIRED)
-find_package(IceT REQUIRED)
+option(ICET_ENABLED "Build the IceT compositing test" ON)
+if (ICET_ENABLED)
+    find_package(IceT REQUIRED)
+endif()
 find_package(MPI REQUIRED)
 find_package(TBB REQUIRED)
 
@@ -21,14 +24,19 @@ set_target_properties(osp_icet PROPERTIES
     CXX_STANDARD 14
     CXX_STANDARD_REQUIRED ON)
 
-target_include_directories(osp_icet PUBLIC
-	${ICET_INCLUDE_DIRS})
-
 target_link_libraries(osp_icet PUBLIC
     ospray::ospray
     rkcommon::rkcommon
     MPI::MPI_CXX
-    TBB::tbb
-	${ICET_CORE_LIBS}
-    ${ICET_MPI_LIBS})
+    TBB::tbb)
+
+if (ICET_ENABLED)
+    target_compile_options(osp_icet PUBLIC
+        -DICET_ENABLED=1)
+    target_include_directories(osp_icet PUBLIC
+        ${ICET_INCLUDE_DIRS})
+    target_link_libraries(osp_icet PUBLIC
+        ${ICET_CORE_LIBS}
+        ${ICET_MPI_LIBS})
+endif()
 
