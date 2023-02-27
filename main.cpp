@@ -131,26 +131,30 @@ int main(int argc, char **argv)
     MPI_Barrier(MPI_COMM_WORLD);
 
     {
+        cpp::Device device(nullptr);
         if (use_ospray_compositing) {
             ospLoadModule("mpi_distributed_cpu");
-            cpp::Device device("mpiDistributed");
+            device = cpp::Device("mpiDistributed");
             device.commit();
             device.setCurrent();
         } else {
-            cpp::Device device("cpu");
+            ospLoadModule("cpu");
+            device = cpp::Device("cpu");
             device.commit();
             device.setCurrent();
         }
 
         // set an error callback to catch any OSPRay errors and exit the application
-        ospDeviceSetErrorFunc(ospGetCurrentDevice(), [](OSPError error, const char *msg) {
-            std::cerr << "[OSPRay error]: " << msg << std::endl << std::flush;
-            std::exit(error);
-        });
+        ospDeviceSetErrorCallback(
+            device.handle(),
+            [](void *, OSPError error, const char *msg) {
+                std::cerr << "[OSPRay error]: " << msg << std::endl << std::flush;
+                std::exit(error);
+            },
+            nullptr);
 
         render_images(args);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
 
     ospShutdown();
     MPI_Finalize();
@@ -172,13 +176,13 @@ void render_images(const std::vector<std::string> &args)
         bg_color = get_vec<float, 3>(config["bg_color"]);
     }
 
-    std::shared_ptr<RenderBackend> backend;
+    std::unique_ptr<RenderBackend> backend;
     if (use_ospray_compositing) {
-        backend = std::make_shared<OSPRayDFBBackend>(img_size, detailed_cpu_stats, bg_color);
+        backend = std::make_unique<OSPRayDFBBackend>(img_size, detailed_cpu_stats, bg_color);
     } else {
 #if ICET_ENABLED
         backend =
-            std::make_shared<IceTBackend>(img_size, volume_dims, detailed_cpu_stats, bg_color);
+            std::make_unique<IceTBackend>(img_size, volume_dims, detailed_cpu_stats, bg_color);
 #else
         std::cout
             << "ERROR: IceT support must be compiled in to compare with IceT compositing\n";
@@ -237,4 +241,5 @@ void render_images(const std::vector<std::string> &args)
     if (mpi_rank == 0) {
         std::cout << "Rendering completed\n";
     }
+    MPI_Barrier(MPI_COMM_WORLD);
 }

@@ -21,7 +21,7 @@ add_executable(osp_icet
     profiling.cpp)
 
 set_target_properties(osp_icet PROPERTIES
-    CXX_STANDARD 14
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON)
 
 target_link_libraries(osp_icet PUBLIC
