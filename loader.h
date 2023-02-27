@@ -8,6 +8,9 @@
 #include <mpi.h>
 #include <ospray/ospray.h>
 #include <ospray/ospray_cpp.h>
+#include <ospray/ospray_cpp/ext/rkcommon.h>
+#include <rkcommon/math/box.h>
+#include <rkcommon/math/vec.h>
 #include "json.hpp"
 
 using namespace ospray;
@@ -58,4 +61,3 @@ VolumeBrick load_volume_brick(json &config, const int mpi_rank, const int mpi_si
 std::vector<Camera> load_cameras(const json &camera_param, const box3f &world_bounds);
 
 cpp::TransferFunction load_colormap(const std::string &file, const vec2f &value_range);
-

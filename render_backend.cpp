@@ -15,7 +15,7 @@
 
 RenderBackend::RenderBackend(const vec2i &size, bool detailed_cpu_stats, const vec3f &bg_color)
     : img_size(size),
-      fb(size, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_DEPTH),
+      fb(size.x, size.y, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_DEPTH),
       report_cpu_stats(detailed_cpu_stats),
       bg_color(bg_color)
 {
@@ -42,7 +42,8 @@ size_t OSPRayDFBBackend::render(const cpp::Camera &camera,
 {
     using namespace std::chrono;
     ProfilingPoint start;
-    fb.renderFrame(renderer, camera, world);
+    auto future = fb.renderFrame(renderer, camera, world);
+    future.wait();
     ProfilingPoint end;
     if (report_cpu_stats) {
         std::cout << "rank " << mpi_rank << ", CPU: " << cpu_utilization(start, end) << "%\n";

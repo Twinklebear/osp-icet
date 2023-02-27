@@ -1,0 +1,19 @@
+{
+    "volume": "generated",
+    "brick_size": [
+        64,
+        64,
+        64
+    ],
+    "spacing": [
+        1,
+        1,
+        1
+    ],
+    "type": "float32",
+    "camera": {
+        "orbit": 4
+    },
+    "image_size": [1024, 1024],
+    "colormap": "../configs/ice_fire.png"
+}

@@ -7,6 +7,9 @@
 #include <mpi.h>
 #include <ospray/ospray.h>
 #include <ospray/ospray_cpp.h>
+#include <rkcommon/math/AffineSpace.h>
+#define OSPRAY_RKCOMMON_DEFINITIONS
+#include <ospray/ospray_cpp/ext/rkcommon.h>
 #include <tbb/task_group.h>
 #include <tbb/tbb.h>
 #include "json.hpp"
@@ -129,12 +132,12 @@ int main(int argc, char **argv)
 
     {
         if (use_ospray_compositing) {
-            ospLoadModule("mpi");
+            ospLoadModule("mpi_distributed_cpu");
             cpp::Device device("mpiDistributed");
             device.commit();
             device.setCurrent();
         } else {
-            cpp::Device device("default");
+            cpp::Device device("cpu");
             device.commit();
             device.setCurrent();
         }
@@ -147,6 +150,7 @@ int main(int argc, char **argv)
 
         render_images(args);
     }
+    MPI_Barrier(MPI_COMM_WORLD);
 
     ospShutdown();
     MPI_Finalize();
@@ -176,7 +180,8 @@ void render_images(const std::vector<std::string> &args)
         backend =
             std::make_shared<IceTBackend>(img_size, volume_dims, detailed_cpu_stats, bg_color);
 #else
-        std::cout << "ERROR: IceT support must be compiled in to compare with IceT compositing\n";
+        std::cout
+            << "ERROR: IceT support must be compiled in to compare with IceT compositing\n";
         std::exit(1);
 #endif
     }
@@ -186,7 +191,7 @@ void render_images(const std::vector<std::string> &args)
     model.commit();
 
     cpp::Group group;
-    group.setParam("volume", cpp::Data(model));
+    group.setParam("volume", cpp::SharedData(model));
     group.commit();
 
     cpp::Instance instance(group);
@@ -195,8 +200,8 @@ void render_images(const std::vector<std::string> &args)
     instance.commit();
 
     cpp::World world;
-    world.setParam("instance", cpp::Data(instance));
-    world.setParam("region", cpp::Data(brick.bounds));
+    world.setParam("instance", cpp::SharedData(instance));
+    world.setParam("region", cpp::SharedData(brick.bounds));
     world.commit();
 
     if (mpi_rank == 0) {
@@ -233,4 +238,3 @@ void render_images(const std::vector<std::string> &args)
         std::cout << "Rendering completed\n";
     }
 }
-

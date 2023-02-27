@@ -221,21 +221,18 @@ VolumeBrick load_volume_brick(json &config, const int mpi_rank, const int mpi_si
         }
     }
 
-    cpp::Data osp_data;
+    cpp::SharedData osp_data;
     if (voxel_type_string == "uint8") {
-        osp_data = cpp::Data(vec3ul(brick.full_dims), brick.voxel_data->data(), true);
+        osp_data = cpp::SharedData(brick.voxel_data->data(), vec3ul(brick.full_dims));
     } else if (voxel_type_string == "uint16") {
-        osp_data = cpp::Data(vec3ul(brick.full_dims),
-                             reinterpret_cast<uint16_t *>(brick.voxel_data->data()),
-                             true);
+        osp_data = cpp::SharedData(reinterpret_cast<uint16_t *>(brick.voxel_data->data()),
+                                   vec3ul(brick.full_dims));
     } else if (voxel_type_string == "float32") {
-        osp_data = cpp::Data(vec3ul(brick.full_dims),
-                             reinterpret_cast<float *>(brick.voxel_data->data()),
-                             true);
+        osp_data = cpp::SharedData(reinterpret_cast<float *>(brick.voxel_data->data()),
+                                   vec3ul(brick.full_dims));
     } else if (voxel_type_string == "float64") {
-        osp_data = cpp::Data(vec3ul(brick.full_dims),
-                             reinterpret_cast<double *>(brick.voxel_data->data()),
-                             true);
+        osp_data = cpp::SharedData(reinterpret_cast<double *>(brick.voxel_data->data()),
+                                   vec3ul(brick.full_dims));
     } else {
         std::cerr << "[error]: Unsupported voxel type\n";
         throw std::runtime_error("[error]: Unsupported voxel type");
@@ -329,10 +326,9 @@ cpp::TransferFunction load_colormap(const std::string &f, const vec2f &value_ran
     }
     stbi_image_free(data);
 
-    tfn.setParam("color", cpp::Data(colors));
-    tfn.setParam("opacity", cpp::Data(opacities));
+    tfn.setParam("color", cpp::CopiedData(colors));
+    tfn.setParam("opacity", cpp::CopiedData(opacities));
     tfn.setParam("valueRange", value_range);
     tfn.commit();
     return tfn;
 }
-
