@@ -49,7 +49,7 @@ const std::string USAGE =
     "  -detailed-stats      Record and print statistics about CPU use, thread pinning, etc.\n"
     "  -h                   Print this help.";
 
-void render_images(const std::vector<std::string> &args);
+void render_images(const std::string &cfg_file_name);
 
 int main(int argc, char **argv)
 {
@@ -74,6 +74,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    std::string cfg_file_name;
     for (size_t i = 1; i < args.size(); ++i) {
         if (args[i] == "-prefix") {
             prefix = args[++i] + "-";
@@ -91,9 +92,10 @@ int main(int argc, char **argv)
             std::cout << USAGE << "\n";
             return 0;
         } else {
-            std::ifstream cfg_file(args[i].c_str());
+            cfg_file_name = args[i];
+            std::ifstream cfg_file(cfg_file_name.c_str());
             if (!cfg_file) {
-                std::cerr << "[error] Failed to open config file " << args[i] << "\n";
+                std::cerr << "[error] Failed to open config file " << cfg_file_name << "\n";
                 return 1;
             }
             cfg_file >> config;
@@ -153,7 +155,7 @@ int main(int argc, char **argv)
             },
             nullptr);
 
-        render_images(args);
+        render_images(cfg_file_name);
     }
 
     ospShutdown();
@@ -161,15 +163,18 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void render_images(const std::vector<std::string> &args)
+void render_images(const std::string &cfg_file_name)
 {
+    const std::string cfg_file_path = get_file_basepath(cfg_file_name) + "/";
+
     VolumeBrick brick = load_volume_brick(config, mpi_rank, mpi_size);
 
     const vec3i volume_dims = get_vec<int, 3>(config["size"]);
     world_bounds = box3f(vec3f(0), vec3f(volume_dims));
     const vec2f value_range = get_vec<float, 2>(config["value_range"]);
     const vec2i img_size = get_vec<int, 2>(config["image_size"]);
-    const auto colormap = load_colormap(config["colormap"].get<std::string>(), value_range);
+    const auto colormap =
+        load_colormap(cfg_file_path + config["colormap"].get<std::string>(), value_range);
     const auto camera_set = load_cameras(config["camera"].get<json>(), world_bounds);
     vec3f bg_color(0.f);
     if (config.find("bg_color") != config.end()) {

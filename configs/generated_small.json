@@ -15,5 +15,5 @@
         "orbit": 4
     },
     "image_size": [1024, 1024],
-    "colormap": "../configs/ice_fire.png"
+    "colormap": "paraview_cool_warm.png"
 }
