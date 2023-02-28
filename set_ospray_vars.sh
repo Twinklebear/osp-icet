@@ -31,7 +31,6 @@ set_ospray_env_vars() {
     fi
 
     export OMP_NUM_THREADS=$OSPRAY_NUM_THREADS
-    source $EMBREE_DIR/embree-vars.sh
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${OSPRAY_DIR}/build/install/lib64/
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${OPENVKL_DIR}/build/install/lib64/
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${OSPCOMMON_DIR}/build/install/lib/

@@ -122,8 +122,8 @@ fig, ax = plt.subplots()
 plot_var = args["<var>"]
 show_error = args["--yerr"]
 
-ax.set_xscale("log", basex=2, nonposx="clip")
-#ax.set_yscale("log", basey=2, nonposy="clip")
+ax.set_xscale("log", base=2, nonpositive="clip")
+#ax.set_yscale("log", base=2, nonpositive="clip")
 
 colors = cm.get_cmap("tab20c", 20)
 next_color = 0

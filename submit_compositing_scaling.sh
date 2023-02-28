@@ -10,8 +10,7 @@ else
 	echo "Using image settings from command line ${IMAGE_SIZE_X}x${IMAGE_SIZE_Y}"
 fi
 
-export BENCH_ITERS=300
-export OSPRAY_DP_API_TRACING=1
+export OSPRAY_DP_API_TRACING=0
 export CLUSTER_NAME="`hostname -d`"
 
 if [[ "$CLUSTER_NAME" == *"tacc"* ]]; then
@@ -31,6 +30,9 @@ if [ "$CLUSTER_NAME" == "stampede2.tacc.utexas.edu" ]; then
 		echo "Assuming $1 is KNL queue"
 		export JOB_QUEUE=$1
 	fi
+elif [ "$CLUSTER_NAME" == "frontera.tacc.utexas.edu" ]; then
+    export MACHINE=frontera
+    export JOB_QUEUE=$1
 elif [ "$CLUSTER_NAME" == "ls5.tacc.utexas.edu" ]; then
 	export MACHINE=ls5
 	export JOB_QUEUE=normal
@@ -61,6 +63,7 @@ if [ -z $TACC ]; then
 fi
 
 export SCRIPT_DIR=$(dirname $(readlink -f $0))
+export REPO_ROOT=$SCRIPT_DIR
 
 if [ "$MACHINE" == "theta" ]; then
 	if [ "$JOB_QUEUE" == "default" ]; then
@@ -80,6 +83,12 @@ elif [ "$MACHINE" == "stampede2" ]; then
 	elif [ "$JOB_QUEUE" == "development" ]; then
 		node_counts=(2)
 	fi
+elif [ "$MACHINE" == "frontera" ]; then
+	if [ "$JOB_QUEUE" == "normal" ]; then
+        node_counts=(4 8 16 32 64 128)
+	elif [ "$JOB_QUEUE" == "development" ]; then
+        node_counts=(1)
+    fi
 else
 	echo "Unrecognized machine, unsure on node counts to scale!"
 	exit 1
@@ -118,12 +127,12 @@ for i in "${node_counts[@]}"; do
 			--env "OSPRAY_THREADS=$OSPRAY_THREADS" \
 			--env "IMAGE_SIZE_X=$IMAGE_SIZE_X" \
 			--env "IMAGE_SIZE_Y=$IMAGE_SIZE_Y" \
-			--env "BENCH_ITERS=$BENCH_ITERS" \
 			--env "BUILD_DIR=$BUILD_DIR" \
 			--env "THETA_JOBNAME=$job_title" \
 			--env "OSPRAY_DP_API_TRACING=$OSPRAY_DP_API_TRACING" \
 			--env "PREFIX=$PREFIX" \
 			--env "SCRIPT_DIR=$SCRIPT_DIR" \
+			--env "REPO_ROOT=$REPO_ROOT" \
 			--env "SCRATCH=$SCRATCH" \
 			${SCRIPT_DIR}/run_compositing_bench.sh				
 	fi

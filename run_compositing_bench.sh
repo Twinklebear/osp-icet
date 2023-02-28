@@ -1,13 +1,12 @@
 #!/bin/bash
 
-module restore
+module restore deps-ospray-dev
 
 if [ -n "$WORK_DIR" ]; then
 	echo "Changing to $WORK_DIR"
 	cd $WORK_DIR
 fi
 
-REPO_ROOT=`git rev-parse --show-toplevel`
 echo "Script dir = $REPO_ROOT"
 source $REPO_ROOT/set_ospray_vars.sh
 
@@ -24,7 +23,7 @@ for c in "${compositors[@]}"; do
         export JOB_PREFIX="${LOG_PREFIX}-${JOB_PREFIX}"
     fi
 
-	ibrun ./osp_icet \
+	ibrun ${BUILD_DIR}/osp_icet \
         -$c \
         -prefix ${JOB_PREFIX} \
         ${JSON_CONFIG} \
