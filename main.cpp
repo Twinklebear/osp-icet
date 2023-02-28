@@ -36,6 +36,7 @@ std::string prefix;
 bool use_ospray_compositing = true;
 bool save_images = true;
 bool detailed_cpu_stats = false;
+bool image_parallel = false;
 
 const std::string USAGE =
     "./osp_icet <config.json> [options]\n"
@@ -45,6 +46,7 @@ const std::string USAGE =
 #if ICET_ENABLED
     "  -icet                Use OSPRay for local rendering only, and IceT for compositing.\n"
 #endif
+    "  -img-parallel        Render image-parallel with replicated data\n"
     "  -no-output           Don't save images of the rendered results.\n"
     "  -detailed-stats      Record and print statistics about CPU use, thread pinning, etc.\n"
     "  -h                   Print this help.";
@@ -84,6 +86,8 @@ int main(int argc, char **argv)
 #endif
         } else if (args[i] == "-dfb") {
             use_ospray_compositing = true;
+        } else if (args[i] == "-image-parallel") {
+            image_parallel = true;
         } else if (args[i] == "-no-output") {
             save_images = false;
         } else if (args[i] == "-detailed-stats") {
@@ -167,7 +171,14 @@ void render_images(const std::string &cfg_file_name)
 {
     const std::string cfg_file_path = get_file_basepath(cfg_file_name) + "/";
 
-    VolumeBrick brick = load_volume_brick(config, mpi_rank, mpi_size);
+    if (image_parallel) {
+        std::cout << "Image parallel rendering\n";
+    } else {
+        std::cout << "Data parallel rendering\n";
+    }
+
+    VolumeBrick brick = load_volume_brick(
+        config, image_parallel ? 0 : mpi_rank, image_parallel ? 1 : mpi_size);
 
     const vec3i volume_dims = get_vec<int, 3>(config["size"]);
     world_bounds = box3f(vec3f(0), vec3f(volume_dims));
