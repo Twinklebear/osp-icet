@@ -67,7 +67,7 @@ Options:
 """
 args = docopt(doc)
 
-parse_log_fname = re.compile(".*bench-(\w+)-(\d+)n-([^0-9]+)-(\d+)\.txt")
+parse_log_fname = re.compile(".*bench-(?:img-parallel-)?(\w+)-(\d+)n-([^0-9]+)-(\d+)\.txt")
 match_config = re.compile("Rendering Config: (.*)")
 match_compositing_overhead = re.compile("(\w+) Compositing Overhead: (\d+\.?\d*)ms")
 match_frame_time = re.compile("Frame (\d+) took (\d+)ms")
